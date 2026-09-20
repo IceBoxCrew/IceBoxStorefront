@@ -2,6 +2,8 @@
 
 ## Complete English Documentation
 
+### Actual for R-1.0.1 Version
+
 > The **IceBoxStorefront Plugin** integrates the **Steamworks SDK** into IceBoxEngine and exposes a
 > single Lua table — **`Storefront`** — to your gameplay scripts (`.ice_class`, `.icemap`, `.ice_widget`).
 >
@@ -43,6 +45,7 @@
    - [The frame tick — `Storefront.Tick()`](#the-frame-tick--storefronttick)
    - [Result codes](#result-codes)
    - [Synchronous vs. asynchronous calls](#synchronous-vs-asynchronous-calls)
+   - [Callback lifetime](#callback-lifetime)
    - [The `UserHandle` table](#the-userhandle-table)
    - [Binary data as Lua strings](#binary-data-as-lua-strings)
    - [Backend availability and Steam-only calls](#backend-availability-and-steam-only-calls)
@@ -319,14 +322,17 @@ Storefront.Result.Ok                                -- enum constant
 
 The results of async calls (`FindOrCreateLeaderboard`, `CreateLobby`, `Workshop.CreateItem`, …) and event handlers
 (`OnP2PMessage`, `OnAchievementUnlocked`, …) are **queued** on the native side and delivered to Lua on the main
-thread, in the engine's plugin-update step, before your level and entity `OnUpdate` run that frame.
+thread, in the engine's plugin-update step, before your level script's `OnLevelUpdate` and your entities' `OnUpdate`
+run that frame. The engine skips that step while the game is paused with `PauseGame()`: nothing is delivered until the
+game resumes or something calls `Storefront.Tick()`. Widget scripts keep updating during a pause, so a widget's
+`OnUpdate` is the place for that call (see [`OnOverlayActivated`](#195-storefrontonoverlayactivated)).
 
 `Storefront.Tick()` remains available as an **explicit, optional** flush — call it when you want the queue drained
 at a specific point of your own frame (for example right before you read `Storefront.ReceiveP2P()` in a networked
 loop), or in code that was written against an earlier version of this plugin:
 
 ```lua
--- Optional. In a level script (.icemap) or a long-lived manager entity:
+-- Optional. In a long-lived manager entity (in a level script (.icemap) this goes into OnLevelUpdate):
 function OnUpdate(dt)
     Storefront.Tick()
 end
@@ -376,6 +382,25 @@ Storefront.FindOrCreateLeaderboard("HighScores",
 
 Callbacks are always invoked on the main thread, from the plugin's per-frame flush (or from a manual
 `Storefront.Tick()`). It is safe to call other `Storefront` functions from within a callback.
+
+### Callback lifetime
+
+Every function you give `Storefront` — an async callback, an `On…` handler, the `SetLogSink` sink — is kept by the
+plugin until it has run (an async callback runs once) or has been replaced (a handler). It always runs on the main
+thread, in the Lua state it was registered from: a handler registered by a widget script runs in the widget state and
+receives tables created there. There is one handler per event for the whole game, so registering one from any script —
+class, level, mod or widget — replaces the previous one. A function passed from inside a coroutine keeps working after
+the coroutine finishes or is stopped.
+
+- **In a built game** handlers stay registered for the whole run, across level changes, and an async callback arrives
+  even if the level that made the request has already been unloaded. A handler registered by one level keeps firing
+  after the next level loads until something registers a new one — a level whose handler works with its own entities
+  or widgets should register it again when it starts.
+- **In the editor, every Play session starts clean.** When Play stops, the plugin removes every handler and drops the
+  callbacks of requests that have not answered yet. The work in Steam still finishes — the score is uploaded, the lobby
+  is created, the Workshop item is published — only your callback is not called. Handlers and callbacks registered
+  while Play is not running are removed the same way, so none of them reaches the next session. This is the rule the
+  engine applies to its own platform callbacks (`Ads`, `IAP`, `Xbox`, …).
 
 ### The `UserHandle` table
 
@@ -591,7 +616,7 @@ unavailable.
 ```lua
 local lang = Storefront.GetLanguage()
 if lang == "russian" then
-    SetLanguage("ru")
+    SetGameLanguage("ru")
 end
 ```
 
@@ -701,9 +726,9 @@ end
 Achievements are identified by their **API Name** (the developer-facing id you set in the Steamworks partner site,
 e.g. `ACH_WIN_ONE_GAME`), not their display name.
 
-Achievement metadata is cached when the plugin initializes and refreshed when Steam delivers updated stats. Reads
-(`GetAchievement`, `GetAllAchievements`) are served from that cache and are synchronous; writes go to Steam and are
-persisted immediately.
+Achievement metadata is cached when the plugin initializes and refreshed when Steam delivers updated stats, as well as
+right after every successful `UnlockAchievement`, `ClearAchievement` and `ResetAllStats`. Reads (`GetAchievement`,
+`GetAllAchievements`) are served from that cache and are synchronous; writes go to Steam and are persisted immediately.
 
 ### 5.1 Storefront.UnlockAchievement
 
@@ -2243,7 +2268,7 @@ Storefront.Workshop.CreateItem({
         return
     end
     Print("Published item " .. itemId)
-    SetString("my_workshop_item", tostring(itemId))
+    WriteFile("my_workshop_item.txt", tostring(itemId))
 
     if needsLegalAgreement then
         ShowDialog("Accept the Steam Workshop agreement so your item becomes visible.")
@@ -3398,7 +3423,7 @@ call — safe to use at the very start of the program, before anything else is i
 
 ```lua
 if Storefront.RestartAppIfNecessary(480) then
-    Quit()
+    QuitGame()
 end
 ```
 
@@ -3412,6 +3437,8 @@ thread, during the plugin's [per-frame flush](#the-frame-tick--storefronttick)**
 
 Registering a handler replaces any previous one for that event. You can register at any time (the plugin re-installs
 handlers when a backend becomes active). Pass `nil`-free functions; to stop receiving, register an empty function.
+How long a handler stays registered — across level changes in a built game, until Play stops in the editor — is
+described in [Callback lifetime](#callback-lifetime).
 
 | Registration | Handler signature |
 |--------------|-------------------|
@@ -3421,6 +3448,7 @@ handlers when a backend becomes active). Pass `nil`-free functions; to stop rece
 | `Storefront.OnAchievementUnlocked(fn)` | `fn(achievement)` |
 | `Storefront.OnOverlayActivated(fn)` | `fn(active)` |
 | `Storefront.OnConnectInvite(fn)` | `fn(connectString)` |
+| `Storefront.OnAuthSessionValidated(fn)` | `fn(user, owner, response)` |
 | `Storefront.SetLogSink(fn)` | `fn(level, message)` |
 
 ### 19.1 Storefront.OnP2PMessage
@@ -3519,8 +3547,19 @@ Called when the Steam overlay opens or closes. Pause the game while the overlay 
 
 ```lua
 Storefront.OnOverlayActivated(function(active)
-    SetPaused(active)
+    if active then PauseGame() else ResumeGame() end
 end)
+```
+
+While the game is paused with `PauseGame()`, the engine does not run the plugin's per-frame update, so on its own the
+`false` event would arrive only after the game resumed — and here that event is what resumes it. Widget scripts keep
+updating during a pause, so let a loaded widget deliver the events in the meantime:
+
+```lua
+-- In a widget script (.ice_widget):
+function OnUpdate(dt)
+    if IsPaused() then Storefront.Tick() end
+end
 ```
 
 ---
@@ -3627,8 +3666,9 @@ end)
 ```
 
 > This is **additive**: the same lines always go to the engine log as well, so you never lose Steam diagnostics by
-> not installing a sink — and installing one does not silence the engine log. Unlike every other handler, the sink
-> is called immediately on the frame the message is produced rather than being queued for `Storefront.Tick()`.
+> not installing a sink — and installing one does not silence the engine log. The engine log gets each line the
+> moment it is produced; your sink, like every other handler, receives it from the plugin's
+> [per-frame flush](#the-frame-tick--storefronttick).
 
 ---
 
@@ -3664,10 +3704,15 @@ every state change and leave it alone in between — it is a mode, not an event.
 | `mode` | `int` | A [`TimelineGameMode`](#timelinegamemode-enum) value |
 
 ```lua
-function OnMainMenuEnter()  Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.Menus) end
-function OnLevelLoadBegin() Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.LoadingScreen) end
-function OnLevelStart()     Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.Playing) end
-function OnInventoryOpen()  Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.Staging) end
+-- OnLevelStart is the level script's own callback; call the other functions where your game changes state.
+function OnLevelStart()    Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.Playing) end
+function OnMainMenuEnter() Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.Menus) end
+function OnInventoryOpen() Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.Staging) end
+
+function GoToLevel(path)
+    Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.LoadingScreen)
+    LoadLevel(path)
+end
 ```
 
 ---
@@ -4308,11 +4353,11 @@ Returned by [`Input.GetControllers`](#154-storefrontinputgetcontrollers).
 
 ## 23. Practical Examples
 
-### 22.1 Minimal setup — guard, identify, tick
+### 23.1 Minimal setup — guard, identify, tick
 
 ```lua
 -- Level script (.icemap) that owns the Steam lifecycle for the session.
-function OnCreate()
+function OnLevelStart()
     if not Storefront.IsAvailable() or not Storefront.IsLoggedIn() then
         Print("Steam not available — continuing without it")
         return
@@ -4321,14 +4366,14 @@ function OnCreate()
           .. " (" .. Storefront.GetLocalUser().textId .. ")")
 end
 
-function OnUpdate(dt)
+function OnLevelUpdate(dt)
     Storefront.Tick()    -- optional: the plugin already flushes callbacks/events every frame
 end
 ```
 
 ---
 
-### 22.2 Achievements + stats at end of a run
+### 23.2 Achievements + stats at end of a run
 
 ```lua
 function OnRunComplete(score, kills, distance)
@@ -4352,7 +4397,7 @@ end
 
 ---
 
-### 22.3 Leaderboards — submit and show top 10
+### 23.3 Leaderboards — submit and show top 10
 
 ```lua
 local board = nil
@@ -4385,7 +4430,7 @@ end
 
 ---
 
-### 22.4 Cloud saves with local fallback
+### 23.4 Cloud saves with local fallback
 
 ```lua
 function SaveGame(slot, bytes)
@@ -4409,7 +4454,7 @@ end
 
 ---
 
-### 22.5 Co-op lobby with invites and join-game
+### 23.5 Co-op lobby with invites and join-game
 
 ```lua
 local myLobby = nil
@@ -4451,7 +4496,7 @@ function OnUpdate(dt) Storefront.Tick() end
 
 ---
 
-### 22.6 P2P state sync (callback style)
+### 23.6 P2P state sync (callback style)
 
 ```lua
 local peers = {}
@@ -4478,13 +4523,13 @@ end
 
 ---
 
-### 22.7 Steam Deck adaptation
+### 23.7 Steam Deck adaptation
 
 ```lua
 function OnCreate()
     if Storefront.IsSteamDeck() then
-        Settings.SetUIScale(1.25)
-        Settings.SetDefaultInput("controller")
+        UseLargerFonts()
+        UseControllerUI()
     end
     if Storefront.IsBigPictureMode() then
         EnableGamepadNavigation()
@@ -4502,7 +4547,7 @@ end
 
 ---
 
-### 22.8 Publishing a Workshop item
+### 23.8 Publishing a Workshop item
 
 ```lua
 function PublishMap(folder, previewPng)
@@ -4516,7 +4561,7 @@ function PublishMap(folder, previewPng)
     }, function(r, itemId)
         if r == Storefront.Result.Ok then
             Print("Published! Item id: " .. itemId)
-            SetString("workshop_item_id", tostring(itemId))
+            WriteFile("workshop_item_id.txt", tostring(itemId))
         else
             Print("Publish failed: " .. Storefront.ResultName(r))
         end
@@ -4554,10 +4599,13 @@ published.
 
 **My callbacks / events never fire.**
 The queue is flushed from the plugin's engine update, which only runs while the **runtime** is running — in the
-editor that means Play mode, not edit mode. Check that the plugin is enabled in `Config/Plugins.json`, that
-`Storefront.IsAvailable()` returns `true`, and that the callback itself is not raising a Lua error (errors inside a
-callback are swallowed by the protected call). A manual [`Storefront.Tick()`](#the-frame-tick--storefronttick) in a
-level-script `OnUpdate` will not hurt, but it is no longer what makes callbacks fire.
+editor that means Play mode, not edit mode — and is skipped while the game is paused with `PauseGame()`. Check that the
+plugin is enabled in `Config/Plugins.json`, that `Storefront.IsAvailable()` returns `true`, and that the callback
+itself is not raising a Lua error: an error inside a callback is caught and written to the engine log as
+`[Steam] Lua callback error: …`. A manual [`Storefront.Tick()`](#the-frame-tick--storefronttick) in a level script's
+`OnLevelUpdate` will not hurt, but it is no longer what makes callbacks fire. In the editor the plugin also
+removes every handler when Play stops, and removes anything registered while Play is not running before it could
+fire — register handlers from the scripts of your game (see [Callback lifetime](#callback-lifetime)).
 
 **`ReceiveP2P()` always returns `nil` even though messages are arriving.**
 You registered an [`OnP2PMessage`](#191-storefrontonp2pmessage) handler. While a handler is set, messages are
@@ -4598,24 +4646,49 @@ loads such catalogs from every plugin folder automatically, so when the Storefro
 
 ### What you get
 
-- **A node for every function** of `Storefront`, `Storefront.Workshop` and `Storefront.Input`, grouped into
-  categories in the node palette: *Steam*, *Steam Achievements*, *Steam Stats*, *Steam Leaderboards*,
-  *Steam Cloud*, *Steam Lobby*, *Steam P2P*, *Steam DLC*, *Steam Overlay*, *Steam Voice*, *Steam Friends*,
-  *Steam Auth*, *Steam Device*, *Steam Events*, *Steam Workshop*, *Steam Input*.
+- **A node for every function** of `Storefront`, `Storefront.Workshop`, `Storefront.Input` and
+  `Storefront.Timeline`, grouped into categories in the node palette: *Steam*, *Steam Achievements*, *Steam Stats*,
+  *Steam Leaderboards*, *Steam Cloud*, *Steam Lobby*, *Steam P2P*, *Steam DLC*, *Steam Overlay*, *Steam Voice*,
+  *Steam Friends*, *Steam Auth*, *Steam Device*, *Steam Events*, *Steam Workshop*, *Steam Input*, *Steam Timeline*.
 - **Enum dropdowns.** Arguments backed by a `Storefront` enum (lobby type, leaderboard sort / display / upload
   method, download range, P2P channel and send type, floating keyboard mode, result codes) get a dropdown picker
   with the full `Storefront.<Enum>.<Value>` expressions and a sensible default already selected.
+- **Typed pins.** Pins carry real types, so wires are type-checked. Functions that return a list — `Get Friends`,
+  `Get All Achievements`, `Cloud List`, `Get DLCs`, `Get Lobby Members`, `Workshop: Get Subscribed`,
+  `Input: Get Controllers` — output an `Array<Table>`, and `Input: Get Digital Action Origins` /
+  `Input: Get Analog Action Origins` output an `Array<Int>`: connect one to **For Each** and you get `Index` and
+  `Element` directly. A function that returns a table or `nil` (`Get Local User`, `Get App Owner`, `Get Achievement`,
+  `Receive P2P`, `Workshop: Get Item Info`, `Workshop: Get Install Info`) outputs a `Table`, text-or-`nil` results
+  (`Get Pending Connect`, `Peek Pending Connect`, `Get Entered Gamepad Text`) output a `String`, and
+  `Parse Connect Lobby` outputs an `Int`. Check a result that can be `nil` with **Is Valid** before using it.
 - **Multiple return values.** Functions that return several values expose one output pin per value —
   `Get Stat Int` has `Value` and `Result` pins, `Get Image RGBA` has `Data`, `Width` and `Height`,
-  `Decompress Voice` has `Result`, `Data` and `SampleRate`, and so on.
-- **Pure getters.** Read-only calls (`Is Logged In`, `Get Persona Name`, `Cloud List`, …) are pure nodes without
-  exec pins — plug their outputs straight into other inputs.
-- **Callbacks.** Asynchronous functions expose a `Callback` pin. Create a Custom Event in your graph and feed it
-  through a **Function Reference** node into the `Callback` input; the event fires with the same arguments the
-  Lua callback would receive.
+  `Decompress Voice` has `Result`, `Data` and `SampleRate`, and so on. The function is called once and fills every
+  output pin.
+- **Pure getters.** Read-only calls (`Is Logged In`, `Get Persona Name`, `Cloud List`, `Get Stat Int`,
+  `Get Image RGBA`, …) are pure nodes without exec pins — plug their outputs straight into other inputs. A pure node
+  runs again for every action node that uses its outputs, so calls that take their result out of a queue are action
+  nodes with exec pins: `Get Pending Connect`, `Receive P2P` and `Get Voice`. Run such a node once and wire its
+  outputs wherever you need them.
+- **Optional arguments.** An optional pin that you leave unconnected and untouched is not passed, so the function's
+  own default applies — for example `includeDisabled` of `Workshop: Get Subscribed` or `timeDelta` of
+  `Timeline: Set Tooltip`. A value you set on such a pin is always passed.
+- **Callbacks.** Asynchronous functions and the `On…` event registrations have a `Callback` pin of type
+  **Function** (a coral square). Create a Custom Event with the callback's parameters and connect a
+  **Function Reference** to it to the `Callback` pin; the event fires with the same arguments the Lua callback would
+  receive. A `Callback` pin left unconnected is reported in the **Problems** panel.
 
-The golden rule from [§3](#the-frame-tick--storefronttick) still applies: run the **Tick** node (category
-*Steam Events*) every frame — e.g. after `On Update` — or queued results and event callbacks will never arrive.
+No Tick node is required: as [§3](#the-frame-tick--storefronttick) explains, the plugin delivers queued results and
+event callbacks every frame on its own. The **Tick** node (category *Steam Events*) remains an optional, explicit
+flush — for example right before you poll `Receive P2P`.
+
+### Graphs made with older editor versions
+
+A graph saved by an older editor is upgraded when it loads. The nodes whose kind changed in this catalog —
+`Get Stat Int`, `Get Stat Float`, `Get Image RGBA`, `Get Achievement Icon RGBA` and `Get Friend Avatar RGBA` became
+pure nodes, `Get Pending Connect` became an action node — keep their old pin layout in such a graph, so existing wires
+stay valid. To give one of them the new layout, replace it with a fresh node from the palette. Save the asset once to
+store the upgraded graph.
 
 ### Where the catalog comes from
 

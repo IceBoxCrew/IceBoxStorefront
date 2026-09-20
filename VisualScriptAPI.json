@@ -1,5 +1,5 @@
 {
- "version": 1,
+ "version": 2,
  "functions": [
   {
    "name": "CapabilityName",
@@ -68,7 +68,7 @@
    "title": "Get App Owner",
    "pure": true,
    "args": [],
-   "ret": "Any"
+   "ret": "Table"
   },
   {
    "name": "GetBackend",
@@ -126,7 +126,7 @@
    "surface": "any",
    "category": "Steam",
    "title": "Get Image RGBA",
-   "pure": false,
+   "pure": true,
    "args": [
     {
      "name": "handle",
@@ -134,6 +134,7 @@
      "opt": false
     }
    ],
+   "ret": "(String, Int, Int)",
    "rets": [
     {
      "name": "Data",
@@ -147,7 +148,8 @@
      "name": "Height",
      "type": "Int"
     }
-   ]
+   ],
+   "legacyPure": false
   },
   {
    "name": "GetLanguage",
@@ -193,7 +195,7 @@
    "title": "Get Local User",
    "pure": true,
    "args": [],
-   "ret": "Any"
+   "ret": "Table"
   },
   {
    "name": "GetPersonaName",
@@ -454,7 +456,7 @@
      "opt": false
     }
    ],
-   "ret": "Any"
+   "ret": "Table"
   },
   {
    "name": "GetAchievementIcon",
@@ -478,7 +480,7 @@
    "surface": "any",
    "category": "Steam Achievements",
    "title": "Get Achievement Icon RGBA",
-   "pure": false,
+   "pure": true,
    "args": [
     {
      "name": "id",
@@ -486,6 +488,7 @@
      "opt": false
     }
    ],
+   "ret": "(String, Int, Int)",
    "rets": [
     {
      "name": "Data",
@@ -499,7 +502,8 @@
      "name": "Height",
      "type": "Int"
     }
-   ]
+   ],
+   "legacyPure": false
   },
   {
    "name": "GetAllAchievements",
@@ -509,7 +513,7 @@
    "title": "Get All Achievements",
    "pure": true,
    "args": [],
-   "ret": "Table"
+   "ret": "Array<Table>"
   },
   {
    "name": "IndicateAchievementProgress",
@@ -626,7 +630,7 @@
    "args": [
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -647,7 +651,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -668,7 +672,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -729,7 +733,7 @@
    "title": "Cloud List",
    "pure": true,
    "args": [],
-   "ret": "Table"
+   "ret": "Array<Table>"
   },
   {
    "name": "CloudQuotaAvailable",
@@ -765,6 +769,7 @@
      "opt": false
     }
    ],
+   "ret": "(String, Int)",
    "rets": [
     {
      "name": "Data",
@@ -805,7 +810,7 @@
    "title": "Get DLCs",
    "pure": true,
    "args": [],
-   "ret": "Table"
+   "ret": "Array<Table>"
   },
   {
    "name": "InstallDLC",
@@ -925,7 +930,7 @@
    "title": "Get Entered Gamepad Text",
    "pure": false,
    "args": [],
-   "ret": "Any"
+   "ret": "String"
   },
   {
    "name": "GetHardwareDefaultConfig",
@@ -1133,7 +1138,7 @@
    "args": [
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -1149,7 +1154,7 @@
    "args": [
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -1165,7 +1170,7 @@
    "args": [
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -1181,7 +1186,7 @@
    "args": [
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -1197,7 +1202,7 @@
    "args": [
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -1213,7 +1218,7 @@
    "args": [
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -1229,7 +1234,7 @@
    "args": [
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -1245,7 +1250,7 @@
    "args": [
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -1298,7 +1303,7 @@
    "surface": "any",
    "category": "Steam Friends",
    "title": "Get Friend Avatar RGBA",
-   "pure": false,
+   "pure": true,
    "args": [
     {
      "name": "User",
@@ -1311,6 +1316,7 @@
      "opt": false
     }
    ],
+   "ret": "(String, Int, Int)",
    "rets": [
     {
      "name": "Data",
@@ -1324,7 +1330,8 @@
      "name": "Height",
      "type": "Int"
     }
-   ]
+   ],
+   "legacyPure": false
   },
   {
    "name": "GetFriends",
@@ -1334,7 +1341,7 @@
    "title": "Get Friends",
    "pure": true,
    "args": [],
-   "ret": "Table"
+   "ret": "Array<Table>"
   },
   {
    "name": "GetPendingConnect",
@@ -1342,9 +1349,10 @@
    "surface": "any",
    "category": "Steam Friends",
    "title": "Get Pending Connect",
-   "pure": true,
+   "pure": false,
    "args": [],
-   "ret": "Any"
+   "ret": "String",
+   "legacyPure": true
   },
   {
    "name": "PeekPendingConnect",
@@ -1354,7 +1362,7 @@
    "title": "Peek Pending Connect",
    "pure": false,
    "args": [],
-   "ret": "Any"
+   "ret": "String"
   },
   {
    "name": "SetRichPresence",
@@ -1528,7 +1536,7 @@
      "opt": false
     }
    ],
-   "ret": "Table"
+   "ret": "Array<Int>"
   },
   {
    "name": "GetControllerForGamepadIndex",
@@ -1554,7 +1562,7 @@
    "title": "Input: Get Controllers",
    "pure": true,
    "args": [],
-   "ret": "Table"
+   "ret": "Array<Table>"
   },
   {
    "name": "GetCurrentActionSet",
@@ -1633,7 +1641,7 @@
      "opt": false
     }
    ],
-   "ret": "Table"
+   "ret": "Array<Int>"
   },
   {
    "name": "GetGamepadIndexForController",
@@ -1954,7 +1962,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -1996,7 +2004,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -2037,7 +2045,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -2070,7 +2078,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -2111,7 +2119,7 @@
      "opt": false
     }
    ],
-   "ret": "Table"
+   "ret": "Array<Table>"
   },
   {
    "name": "InviteFriendToLobby",
@@ -2149,7 +2157,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -2185,7 +2193,7 @@
      "opt": false
     }
    ],
-   "ret": "Any"
+   "ret": "Int"
   },
   {
    "name": "SearchLobbies",
@@ -2202,7 +2210,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -2427,7 +2435,7 @@
    "title": "Receive P2P",
    "pure": false,
    "args": [],
-   "ret": "Any"
+   "ret": "Table"
   },
   {
    "name": "SendP2P",
@@ -2490,7 +2498,7 @@
    "surface": "any",
    "category": "Steam Stats",
    "title": "Get Stat Float",
-   "pure": false,
+   "pure": true,
    "args": [
     {
      "name": "id",
@@ -2498,6 +2506,7 @@
      "opt": false
     }
    ],
+   "ret": "(Float, Int)",
    "rets": [
     {
      "name": "Value",
@@ -2507,7 +2516,8 @@
      "name": "Result",
      "type": "Int"
     }
-   ]
+   ],
+   "legacyPure": false
   },
   {
    "name": "GetStatInt",
@@ -2515,7 +2525,7 @@
    "surface": "any",
    "category": "Steam Stats",
    "title": "Get Stat Int",
-   "pure": false,
+   "pure": true,
    "args": [
     {
      "name": "id",
@@ -2523,6 +2533,7 @@
      "opt": false
     }
    ],
+   "ret": "(Int, Int)",
    "rets": [
     {
      "name": "Value",
@@ -2532,7 +2543,8 @@
      "name": "Result",
      "type": "Int"
     }
-   ]
+   ],
+   "legacyPure": false
   },
   {
    "name": "RequestNumberOfCurrentPlayers",
@@ -2544,7 +2556,7 @@
    "args": [
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -2952,6 +2964,7 @@
      "opt": false
     }
    ],
+   "ret": "(Int, String, Int)",
    "rets": [
     {
      "name": "Result",
@@ -2975,6 +2988,7 @@
    "title": "Get Voice",
    "pure": false,
    "args": [],
+   "ret": "(Int, String)",
    "rets": [
     {
      "name": "Result",
@@ -3021,7 +3035,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -3047,7 +3061,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -3067,7 +3081,7 @@
      "opt": false
     }
    ],
-   "ret": "Any"
+   "ret": "Table"
   },
   {
    "name": "GetItemInfo",
@@ -3083,7 +3097,7 @@
      "opt": false
     }
    ],
-   "ret": "Any"
+   "ret": "Table"
   },
   {
    "name": "GetItemState",
@@ -3115,7 +3129,7 @@
      "opt": true
     }
    ],
-   "ret": "Table"
+   "ret": "Array<Table>"
   },
   {
    "name": "GetUpdateProgress",
@@ -3168,7 +3182,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -3189,7 +3203,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -3215,7 +3229,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -3278,7 +3292,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -3299,7 +3313,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -3320,7 +3334,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],
@@ -3346,7 +3360,7 @@
     },
     {
      "name": "Callback",
-     "type": "Any",
+     "type": "Function",
      "opt": false
     }
    ],

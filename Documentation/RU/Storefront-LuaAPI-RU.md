@@ -2,6 +2,8 @@
 
 ## Полная документация на русском языке
 
+### Актуальная для версии R-1.0.1
+
 > **IceBoxStorefront Plugin** интегрирует **Steamworks SDK** в IceBoxEngine и предоставляет вашим игровым
 > скриптам (`.ice_class`, `.icemap`, `.ice_widget`) единственную таблицу Lua — **`Storefront`**.
 >
@@ -44,6 +46,7 @@
    - [Покадровый тик — `Storefront.Tick()`](#the-frame-tick--storefronttick)
    - [Коды результата](#result-codes)
    - [Синхронные и асинхронные вызовы](#synchronous-vs-asynchronous-calls)
+   - [Время жизни колбэков](#callback-lifetime)
    - [Таблица `UserHandle`](#the-userhandle-table)
    - [Бинарные данные как строки Lua](#binary-data-as-lua-strings)
    - [Доступность бэкенда и Steam-специфичные вызовы](#backend-availability-and-steam-only-calls)
@@ -335,15 +338,18 @@ Storefront.Result.Ok                                -- константа пер
 
 Результаты асинхронных вызовов (`FindOrCreateLeaderboard`, `CreateLobby`, `Workshop.CreateItem`, …) и обработчики
 событий (`OnP2PMessage`, `OnAchievementUnlocked`, …) **ставятся в очередь** на нативной стороне и доставляются в Lua
-в главном потоке, на шаге обновления плагинов — до того, как в этом кадре выполнятся ваши `OnUpdate` уровня и
-сущностей.
+в главном потоке, на шаге обновления плагинов — до того, как в этом кадре выполнятся `OnLevelUpdate` скрипта уровня и
+`OnUpdate` ваших сущностей. Пока игра поставлена на паузу через `PauseGame()`, движок этот шаг пропускает: ничего не
+доставляется, пока игра не продолжится или пока кто-нибудь не вызовет `Storefront.Tick()`. Скрипты виджетов
+продолжают обновляться и на паузе, поэтому место для такого вызова — `OnUpdate` виджета (см.
+[`OnOverlayActivated`](#195-storefrontonoverlayactivated)).
 
 `Storefront.Tick()` остаётся доступным как **явный необязательный** сброс очереди — вызывайте его, когда хотите
 опустошить очередь в конкретной точке своего кадра (например, прямо перед чтением `Storefront.ReceiveP2P()` в
 сетевом цикле) или в коде, написанном под более раннюю версию плагина:
 
 ```lua
--- Необязательно. В скрипте уровня (.icemap) или в долгоживущей сущности-менеджере:
+-- Необязательно. В долгоживущей сущности-менеджере (в скрипте уровня (.icemap) это идёт в OnLevelUpdate):
 function OnUpdate(dt)
     Storefront.Tick()
 end
@@ -396,6 +402,29 @@ Storefront.FindOrCreateLeaderboard("HighScores",
 
 Колбэки всегда вызываются в главном потоке, из покадрового сброса очереди плагином (или из ручного
 `Storefront.Tick()`). Из колбэка безопасно вызывать другие функции `Storefront`.
+
+<a id="callback-lifetime"></a>
+### Время жизни колбэков
+
+Каждую функцию, которую вы передаёте в `Storefront`, — колбэк асинхронного вызова, обработчик `On…`, приёмник
+`SetLogSink` — плагин хранит, пока она не выполнится (колбэк асинхронного вызова срабатывает один раз) или пока её не
+заменят (обработчик). Она всегда вызывается в главном потоке и в том Lua-состоянии, из которого её зарегистрировали:
+обработчик, зарегистрированный скриптом виджета, выполняется в состоянии виджетов и получает таблицы, созданные там же.
+На каждое событие приходится один обработчик на всю игру, поэтому регистрация обработчика из любого скрипта — класса,
+уровня, мода или виджета — заменяет предыдущий. Функция, переданная изнутри корутины, продолжает работать и после
+того, как корутина завершилась или была остановлена.
+
+- **В собранной игре** обработчики остаются зарегистрированными всё время работы игры, в том числе при смене уровня,
+  а колбэк асинхронного вызова приходит, даже если уровень, сделавший запрос, уже выгружен. Обработчик,
+  зарегистрированный одним уровнем, продолжает срабатывать после загрузки следующего, пока кто-нибудь не
+  зарегистрирует новый, — поэтому уровень, чей обработчик работает с его собственными сущностями или виджетами,
+  должен регистрировать его заново при старте.
+- **В редакторе каждая сессия Play начинается с чистого листа.** Когда Play останавливается, плагин снимает все
+  обработчики и отбрасывает колбэки запросов, на которые ещё не пришёл ответ. Сама работа в Steam при этом
+  доводится до конца — результат загружается в таблицу лидеров, лобби создаётся, предмет Мастерской публикуется, —
+  не вызывается только ваш колбэк. Обработчики и колбэки, зарегистрированные, пока Play не запущен, снимаются так
+  же, поэтому ни один из них не доживает до следующей сессии. Это то же правило, которое движок применяет к своим
+  платформенным колбэкам (`Ads`, `IAP`, `Xbox`, …).
 
 <a id="the-userhandle-table"></a>
 ### Таблица `UserHandle`
@@ -619,7 +648,7 @@ Storefront.GetLanguage() -> string
 ```lua
 local lang = Storefront.GetLanguage()
 if lang == "russian" then
-    SetLanguage("ru")
+    SetGameLanguage("ru")
 end
 ```
 
@@ -732,8 +761,9 @@ end
 `ACH_WIN_ONE_GAME`), а не по отображаемому имени.
 
 Метаданные достижений кешируются при инициализации плагина и обновляются, когда Steam доставляет обновлённую
-статистику. Чтения (`GetAchievement`, `GetAllAchievements`) обслуживаются из этого кеша и являются синхронными; записи
-уходят в Steam и сохраняются немедленно.
+статистику, а также сразу после каждого успешного `UnlockAchievement`, `ClearAchievement` и `ResetAllStats`. Чтения
+(`GetAchievement`, `GetAllAchievements`) обслуживаются из этого кеша и являются синхронными; записи уходят в Steam и
+сохраняются немедленно.
 
 ### 5.1 Storefront.UnlockAchievement
 
@@ -2296,7 +2326,7 @@ Storefront.Workshop.CreateItem({
         return
     end
     Print("Опубликован элемент " .. itemId)
-    SetString("my_workshop_item", tostring(itemId))
+    WriteFile("my_workshop_item.txt", tostring(itemId))
 
     if needsLegalAgreement then
         ShowDialog("Примите соглашение Мастерской Steam, чтобы элемент стал видимым.")
@@ -3470,7 +3500,7 @@ Storefront.RestartAppIfNecessary(appId) -> bool
 
 ```lua
 if Storefront.RestartAppIfNecessary(480) then
-    Quit()
+    QuitGame()
 end
 ```
 
@@ -3486,7 +3516,8 @@ end
 
 Регистрация обработчика заменяет любой предыдущий для этого события. Регистрировать можно в любое время (плагин
 переустанавливает обработчики, когда бэкенд становится активным). Передавайте функции без `nil`; чтобы перестать
-получать события, зарегистрируйте пустую функцию.
+получать события, зарегистрируйте пустую функцию. Сколько обработчик остаётся зарегистрированным — в собранной игре
+и после смены уровня, в редакторе до остановки Play, — описано в разделе [Время жизни колбэков](#callback-lifetime).
 
 | Регистрация | Сигнатура обработчика |
 |--------------|-------------------|
@@ -3496,6 +3527,7 @@ end
 | `Storefront.OnAchievementUnlocked(fn)` | `fn(achievement)` |
 | `Storefront.OnOverlayActivated(fn)` | `fn(active)` |
 | `Storefront.OnConnectInvite(fn)` | `fn(connectString)` |
+| `Storefront.OnAuthSessionValidated(fn)` | `fn(user, owner, response)` |
 | `Storefront.SetLogSink(fn)` | `fn(level, message)` |
 
 ### 19.1 Storefront.OnP2PMessage
@@ -3594,8 +3626,19 @@ Storefront.OnOverlayActivated(function(active) ... end)
 
 ```lua
 Storefront.OnOverlayActivated(function(active)
-    SetPaused(active)
+    if active then PauseGame() else ResumeGame() end
 end)
+```
+
+Пока игра поставлена на паузу через `PauseGame()`, движок не выполняет покадровое обновление плагина, поэтому само по
+себе событие `false` пришло бы только после того, как игра продолжится, — а здесь именно оно её и продолжает. Скрипты
+виджетов обновляются и на паузе, так что пусть загруженный виджет тем временем доставляет события:
+
+```lua
+-- В скрипте виджета (.ice_widget):
+function OnUpdate(dt)
+    if IsPaused() then Storefront.Tick() end
+end
 ```
 
 ---
@@ -3705,8 +3748,9 @@ end)
 ```
 
 > Сток **дополняющий**: те же строки всегда попадают и в лог движка, поэтому вы не потеряете диагностику Steam, если
-> не установили свой обработчик, а установка обработчика не заглушает лог движка. В отличие от остальных обработчиков,
-> сток вызывается сразу в том же кадре, когда сообщение появилось, а не откладывается до `Storefront.Tick()`.
+> не установили свой обработчик, а установка обработчика не заглушает лог движка. Лог движка получает каждую строку в
+> момент её появления, а ваш сток, как и любой другой обработчик, — из
+> [покадрового сброса очереди](#the-frame-tick--storefronttick) плагином.
 
 ---
 
@@ -3743,10 +3787,15 @@ Storefront.Timeline.SetGameMode(mode)
 | `mode` | `int` | Значение [`TimelineGameMode`](#timelinegamemode-enum) |
 
 ```lua
-function OnMainMenuEnter()  Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.Menus) end
-function OnLevelLoadBegin() Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.LoadingScreen) end
-function OnLevelStart()     Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.Playing) end
-function OnInventoryOpen()  Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.Staging) end
+-- OnLevelStart — собственный колбэк скрипта уровня; остальные функции вызывайте там, где игра меняет состояние.
+function OnLevelStart()    Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.Playing) end
+function OnMainMenuEnter() Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.Menus) end
+function OnInventoryOpen() Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.Staging) end
+
+function GoToLevel(path)
+    Storefront.Timeline.SetGameMode(Storefront.TimelineGameMode.LoadingScreen)
+    LoadLevel(path)
+end
 ```
 
 ---
@@ -4393,11 +4442,11 @@ end
 <a id="23-practical-examples"></a>
 ## 23. Практические примеры
 
-### 22.1 Минимальная настройка — защита, идентификация, тик
+### 23.1 Минимальная настройка — защита, идентификация, тик
 
 ```lua
 -- Скрипт уровня (.icemap), который владеет жизненным циклом Steam для сессии.
-function OnCreate()
+function OnLevelStart()
     if not Storefront.IsAvailable() or not Storefront.IsLoggedIn() then
         Print("Steam недоступен — продолжаем без него")
         return
@@ -4406,14 +4455,14 @@ function OnCreate()
           .. " (" .. Storefront.GetLocalUser().textId .. ")")
 end
 
-function OnUpdate(dt)
+function OnLevelUpdate(dt)
     Storefront.Tick()    -- необязательно: плагин и так сбрасывает колбэки/события каждый кадр
 end
 ```
 
 ---
 
-### 22.2 Достижения + статистика в конце забега
+### 23.2 Достижения + статистика в конце забега
 
 ```lua
 function OnRunComplete(score, kills, distance)
@@ -4437,7 +4486,7 @@ end
 
 ---
 
-### 22.3 Таблицы лидеров — отправить и показать топ-10
+### 23.3 Таблицы лидеров — отправить и показать топ-10
 
 ```lua
 local board = nil
@@ -4470,7 +4519,7 @@ end
 
 ---
 
-### 22.4 Облачные сохранения с локальным запасным вариантом
+### 23.4 Облачные сохранения с локальным запасным вариантом
 
 ```lua
 function SaveGame(slot, bytes)
@@ -4494,7 +4543,7 @@ end
 
 ---
 
-### 22.5 Кооперативное лобби с приглашениями и присоединением к игре
+### 23.5 Кооперативное лобби с приглашениями и присоединением к игре
 
 ```lua
 local myLobby = nil
@@ -4536,7 +4585,7 @@ function OnUpdate(dt) Storefront.Tick() end
 
 ---
 
-### 22.6 Синхронизация состояния по P2P (стиль колбэков)
+### 23.6 Синхронизация состояния по P2P (стиль колбэков)
 
 ```lua
 local peers = {}
@@ -4563,13 +4612,13 @@ end
 
 ---
 
-### 22.7 Адаптация под Steam Deck
+### 23.7 Адаптация под Steam Deck
 
 ```lua
 function OnCreate()
     if Storefront.IsSteamDeck() then
-        Settings.SetUIScale(1.25)
-        Settings.SetDefaultInput("controller")
+        UseLargerFonts()
+        UseControllerUI()
     end
     if Storefront.IsBigPictureMode() then
         EnableGamepadNavigation()
@@ -4587,7 +4636,7 @@ end
 
 ---
 
-### 22.8 Публикация элемента Мастерской
+### 23.8 Публикация элемента Мастерской
 
 ```lua
 function PublishMap(folder, previewPng)
@@ -4601,7 +4650,7 @@ function PublishMap(folder, previewPng)
     }, function(r, itemId)
         if r == Storefront.Result.Ok then
             Print("Опубликовано! Id элемента: " .. itemId)
-            SetString("workshop_item_id", tostring(itemId))
+            WriteFile("workshop_item_id.txt", tostring(itemId))
         else
             Print("Публикация не удалась: " .. Storefront.ResultName(r))
         end
@@ -4640,10 +4689,14 @@ Steam уже после игры или редактора: в логе появ
 
 **Мои колбэки / события никогда не срабатывают.**
 Очередь сбрасывается из шага обновления плагина в движке, а он работает только пока запущен **рантайм** — в
-редакторе это режим Play, а не режим редактирования. Проверьте, что плагин включён в `Config/Plugins.json`, что
-`Storefront.IsAvailable()` возвращает `true` и что сам колбэк не вызывает ошибку Lua (ошибки внутри колбэка
-проглатываются защищённым вызовом). Ручной [`Storefront.Tick()`](#the-frame-tick--storefronttick) в `OnUpdate`
-скрипта уровня не помешает, но он больше не является тем, что заставляет колбэки срабатывать.
+редакторе это режим Play, а не режим редактирования, — и пропускается, пока игра поставлена на паузу через
+`PauseGame()`. Проверьте, что плагин включён в `Config/Plugins.json`, что `Storefront.IsAvailable()` возвращает `true`
+и что сам колбэк не вызывает ошибку Lua: ошибка внутри колбэка перехватывается и пишется в лог движка как
+`[Steam] Lua callback error: …`. Ручной [`Storefront.Tick()`](#the-frame-tick--storefronttick) в `OnLevelUpdate`
+скрипта уровня не помешает, но он больше не является тем, что заставляет колбэки срабатывать. В редакторе плагин
+к тому же снимает все обработчики, когда Play останавливается, а всё, что зарегистрировано, пока Play не запущен,
+снимает раньше, чем оно успело бы сработать, — регистрируйте обработчики из скриптов вашей игры (см.
+[Время жизни колбэков](#callback-lifetime)).
 
 **`ReceiveP2P()` всегда возвращает `nil`, хотя сообщения приходят.**
 Вы зарегистрировали обработчик [`OnP2PMessage`](#191-storefrontonp2pmessage). Пока обработчик установлен, сообщения
@@ -4687,26 +4740,52 @@ Storefront-плагина весь API `Storefront` также доступен 
 
 ### Что вы получаете
 
-- **Нода для каждой функции** `Storefront`, `Storefront.Workshop` и `Storefront.Input`, сгруппированные по
-  категориям в палитре нод: *Steam*, *Steam Achievements*, *Steam Stats*, *Steam Leaderboards*, *Steam Cloud*,
-  *Steam Lobby*, *Steam P2P*, *Steam DLC*, *Steam Overlay*, *Steam Voice*, *Steam Friends*, *Steam Auth*,
-  *Steam Device*, *Steam Events*, *Steam Workshop*, *Steam Input*.
+- **Нода для каждой функции** `Storefront`, `Storefront.Workshop`, `Storefront.Input` и `Storefront.Timeline`,
+  сгруппированные по категориям в палитре нод: *Steam*, *Steam Achievements*, *Steam Stats*, *Steam Leaderboards*,
+  *Steam Cloud*, *Steam Lobby*, *Steam P2P*, *Steam DLC*, *Steam Overlay*, *Steam Voice*, *Steam Friends*,
+  *Steam Auth*, *Steam Device*, *Steam Events*, *Steam Workshop*, *Steam Input*, *Steam Timeline*.
 - **Выпадающие списки перечислений.** Аргументы, за которыми стоит перечисление `Storefront` (тип лобби,
   сортировка / отображение / метод загрузки таблиц лидеров, диапазон выборки, канал и тип отправки P2P, режим
   экранной клавиатуры, коды результата), получают пикер с полными выражениями `Storefront.<Enum>.<Value>` и уже
   выбранным разумным значением по умолчанию.
+- **Типизированные пины.** У пинов настоящие типы, поэтому провода проверяются по типу. Функции, возвращающие
+  список, — `Get Friends`, `Get All Achievements`, `Cloud List`, `Get DLCs`, `Get Lobby Members`,
+  `Workshop: Get Subscribed`, `Input: Get Controllers` — выдают `Array<Table>`, а `Input: Get Digital Action Origins` /
+  `Input: Get Analog Action Origins` — `Array<Int>`: подключите такой выход к **For Each** и сразу получите `Index`
+  и `Element`. Функция, возвращающая таблицу или `nil` (`Get Local User`, `Get App Owner`, `Get Achievement`,
+  `Receive P2P`, `Workshop: Get Item Info`, `Workshop: Get Install Info`), выдаёт `Table`, результаты «текст или
+  `nil`» (`Get Pending Connect`, `Peek Pending Connect`, `Get Entered Gamepad Text`) — `String`, а
+  `Parse Connect Lobby` — `Int`. Результат, который может быть `nil`, проверяйте нодой **Is Valid** перед
+  использованием.
 - **Несколько возвращаемых значений.** Функции, возвращающие несколько значений, дают по выходному пину на
   каждое — у `Get Stat Int` есть пины `Value` и `Result`, у `Get Image RGBA` — `Data`, `Width` и `Height`,
-  у `Decompress Voice` — `Result`, `Data` и `SampleRate`, и так далее.
-- **Чистые геттеры.** Вызовы только для чтения (`Is Logged In`, `Get Persona Name`, `Cloud List`, …) — это
-  чистые ноды без exec-пинов: подключайте их выходы напрямую к другим входам.
-- **Колбэки.** Асинхронные функции имеют пин `Callback`. Создайте в графе Custom Event и подайте его через ноду
-  **Function Reference** во вход `Callback` — событие сработает с теми же аргументами, что получил бы
-  Lua-колбэк.
+  у `Decompress Voice` — `Result`, `Data` и `SampleRate`, и так далее. Функция вызывается один раз и заполняет все
+  выходные пины.
+- **Чистые геттеры.** Вызовы только для чтения (`Is Logged In`, `Get Persona Name`, `Cloud List`, `Get Stat Int`,
+  `Get Image RGBA`, …) — это чистые ноды без exec-пинов: подключайте их выходы напрямую к другим входам. Чистая
+  нода выполняется заново для каждой ноды-действия, которая использует её выходы, поэтому вызовы, забирающие свой
+  результат из очереди, — это ноды-действия с exec-пинами: `Get Pending Connect`, `Receive P2P` и `Get Voice`.
+  Выполните такую ноду один раз и тяните её выходы туда, где они нужны.
+- **Необязательные аргументы.** Необязательный пин, который вы оставили неподключённым и не трогали, не
+  передаётся — работает значение по умолчанию самой функции, например `includeDisabled` у
+  `Workshop: Get Subscribed` или `timeDelta` у `Timeline: Set Tooltip`. Значение, которое вы задали на таком пине,
+  передаётся всегда.
+- **Колбэки.** У асинхронных функций и у регистраторов событий `On…` есть пин `Callback` типа **Function**
+  (коралловый квадрат). Создайте Custom Event с параметрами колбэка и подключите ноду **Function Reference** на
+  него к пину `Callback` — событие сработает с теми же аргументами, что получил бы Lua-колбэк. Неподключённый пин
+  `Callback` отображается в панели **Problems**.
 
-Золотое правило из [§3](#the-frame-tick--storefronttick) остаётся в силе: запускайте ноду **Tick** (категория
-*Steam Events*) каждый кадр — например, после `On Update` — иначе поставленные в очередь результаты и колбэки
-событий никогда не придут.
+Нода Tick не обязательна: как объяснено в [§3](#the-frame-tick--storefronttick), плагин сам каждый кадр доставляет
+результаты из очереди и колбэки событий. Нода **Tick** (категория *Steam Events*) остаётся необязательным явным
+сбросом очереди — например, прямо перед опросом `Receive P2P`.
+
+### Графы из старых версий редактора
+
+Граф, сохранённый старым редактором, обновляется при загрузке. Ноды, чей вид в этом каталоге изменился, —
+`Get Stat Int`, `Get Stat Float`, `Get Image RGBA`, `Get Achievement Icon RGBA` и `Get Friend Avatar RGBA` стали
+чистыми, `Get Pending Connect` стала нодой-действием — сохраняют в таком графе прежнюю раскладку пинов, поэтому
+существующие провода остаются рабочими. Чтобы перевести такую ноду на новую раскладку, замените её свежей нодой из
+палитры. Сохраните ассет один раз, чтобы записать обновлённый граф.
 
 ### Откуда берётся каталог
 

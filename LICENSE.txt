@@ -2,7 +2,7 @@
                   IceBoxStorefront PLUGIN - LICENSE
 ================================================================================
 
-Version:        2.0
+Version:        1.0.1
 Effective date: 2026-09-09
 Applies to:     IceBoxStorefront Plugin - the Steamworks integration plugin
                 for IceBoxEngine - as supplied in compiled form together

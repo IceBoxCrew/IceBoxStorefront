@@ -1,4 +1,8 @@
-# IceBoxStorefront Plugin
+<p align="center">
+  <img src="icon.png" alt="IceBoxStorefront Logo" width="200">
+</p>
+
+# IceBoxStorefront Plugin - Release 1.0.1
 
 **Steamworks integration for IceBoxEngine.** Windows · Linux · macOS.
 
@@ -143,12 +147,13 @@ intact. There is nothing to call from Lua.
 ## Visual scripting nodes
 
 Every `Storefront`, `Storefront.Workshop`, `Storefront.Input` and `Storefront.Timeline` function is
-available as a node, with enum dropdowns, multi-value output pins and pure getter nodes. The editor picks
+available as a node, with enum dropdowns, typed pins (lists come out as arrays ready for **For Each**),
+multi-value output pins, pure getter nodes and `Function` callback pins. The editor picks
 `VisualScriptAPI.json` up on its own — there is nothing to install or configure. See the
 "Visual Scripting Nodes" section of the documentation.
 
-The golden rule: run the **Tick** node (category *Steam Events*) every frame in a graph that needs
-callbacks, or use the automatic per-frame pump the plugin already performs while the runtime is running.
+No **Tick** node is needed: the plugin delivers results and event callbacks every frame on its own while the
+runtime is running. The **Tick** node (category *Steam Events*) stays available as an optional, explicit flush.
 
 ## License
 
