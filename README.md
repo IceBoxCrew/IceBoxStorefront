@@ -101,9 +101,10 @@ without Steam. Guard with `Storefront.IsAvailable()` when you want to branch.
   archive. **Required.**
 - `plugin.json` — the manifest. The engine identifies the plugin by its `Name`, which is
   `IceBoxStorefront`. **Required.**
-- `VisualScriptAPI.json` — the node catalog. The editor loads it from the plugin folder and shows every
-  `Storefront` function as a node. It looks generated, and it is, but it is a **required run-time data
-  file** — a build without it silently loses every `Storefront` node.
+- `VisualScriptAPI.json` — the node catalog. The editor loads it from the plugin folder, shows every
+  `Storefront` function as a node and suggests them in the Lua editor's autocomplete. It looks generated, and
+  it is, but it is a **required run-time data file** — a build without it silently loses every `Storefront`
+  node.
 - `icon.png` — 256×256 plugin icon, shown in the editor's Plugins panel and in the launcher's
   Plugins & Mods tab. Drop it and the plugin shows up as a blank tile.
 - `Documentation/` — the full API reference, about 400 KB of Markdown. Optional at run time.
@@ -147,10 +148,11 @@ intact. There is nothing to call from Lua.
 ## Visual scripting nodes
 
 Every `Storefront`, `Storefront.Workshop`, `Storefront.Input` and `Storefront.Timeline` function is
-available as a node, with enum dropdowns, typed pins (lists come out as arrays ready for **For Each**),
-multi-value output pins, pure getter nodes and `Function` callback pins. The editor picks
-`VisualScriptAPI.json` up on its own — there is nothing to install or configure. See the
-"Visual Scripting Nodes" section of the documentation.
+available as a node, with enum dropdowns, typed pins (the returned tables are named types such as
+`Table<UserHandle>`, and lists come out as arrays ready for **For Each**), multi-value output pins, pure
+getter nodes and `Function` callback pins. The editor picks `VisualScriptAPI.json` up on its own — there is
+nothing to install or configure — and the Lua script editors use the same file for their autocomplete. See
+the "Visual Scripting Nodes" section of the documentation.
 
 No **Tick** node is needed: the plugin delivers results and event callbacks every frame on its own while the
 runtime is running. The **Tick** node (category *Steam Events*) stays available as an optional, explicit flush.

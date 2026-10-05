@@ -249,7 +249,7 @@ Steam-сборка должна быть **запущена именно Steam**
 > `steam_appid.txt` в особенности: его место — рядом с вашей сборкой на вашей машине и больше нигде. Его не должно
 > быть ни в пакете, который вы загружаете в Steam, ни в пакете плагина, который вы отдаёте другому разработчику.
 
-[`Storefront.RestartAppIfNecessary(appId)`](#185-storefrontrestartappifnecessary) по-прежнему доступна на редкий
+[`Storefront.RestartAppIfNecessary(appId)`](#185-storefrontrestartappifnecessary) тоже доступна на редкий
 случай, когда вы хотите управлять проверкой сами, но вызов из скрипта уровня слишком поздний, чтобы быть основным
 механизмом — Steam к тому моменту уже инициализирован.
 
@@ -344,9 +344,8 @@ Storefront.Result.Ok                                -- константа пер
 продолжают обновляться и на паузе, поэтому место для такого вызова — `OnUpdate` виджета (см.
 [`OnOverlayActivated`](#195-storefrontonoverlayactivated)).
 
-`Storefront.Tick()` остаётся доступным как **явный необязательный** сброс очереди — вызывайте его, когда хотите
-опустошить очередь в конкретной точке своего кадра (например, прямо перед чтением `Storefront.ReceiveP2P()` в
-сетевом цикле) или в коде, написанном под более раннюю версию плагина:
+`Storefront.Tick()` — **явный необязательный** сброс очереди: вызывайте его, когда хотите опустошить очередь в
+конкретной точке своего кадра, например прямо перед чтением `Storefront.ReceiveP2P()` в сетевом цикле:
 
 ```lua
 -- Необязательно. В долгоживущей сущности-менеджере (в скрипте уровня (.icemap) это идёт в OnLevelUpdate):
@@ -2827,10 +2826,17 @@ Storefront.Input.StopAnalogActionMomentum(handle, action)
 
 | Поле | Тип | Описание |
 |-------|------|-------------|
-| `x` | `float` | Горизонтальная ось (обычно `-1`…`1`) |
-| `y` | `float` | Вертикальная ось (обычно `-1`…`1`) |
+| `x` | `float` | Горизонтальная ось, X+ — вправо |
+| `y` | `float` | Вертикальная ось, Y+ — вверх |
 | `mode` | `int` | Режим источника (джойстик, трекпад, мышь, …), как сообщает Steam |
 | `active` | `bool` | Привязано/активно ли действие в данный момент |
+
+`x` и `y` идут по осям движка — X+ вправо, Y+ вверх — для обоих видов аналоговых действий из вашего манифеста действий:
+
+- **`joystick_move`** — положение стика, `-1`…`1`; стик вверх даёт `y = 1`, как у `GetGamepadLeftStick`.
+- **`absolute_mouse`** (трекпад, гироскоп, ввод в стиле мыши) — смещение с прошлого кадра в пикселях; движение вверх
+  даёт положительный `y`, как у `GetMouseDelta`. Сам Steam отдаёт это смещение с Y, растущим вниз, как у мыши
+  операционной системы; плагин разворачивает его за вас.
 
 `StopAnalogActionMomentum` отменяет остаточную инерцию «броска» трекпада для действия.
 
@@ -2862,6 +2868,7 @@ end
 Storefront.Input.GetDigitalActionOrigins(handle, actionSet, action) -> table
 Storefront.Input.GetAnalogActionOrigins(handle, actionSet, action)  -> table
 Storefront.Input.GetGlyphSVGForActionOrigin(origin)                 -> string
+Storefront.Input.GetGlyphPNGForActionOrigin(origin, size?)          -> string
 Storefront.Input.GetStringForActionOrigin(origin)                   -> string
 ```
 
@@ -2987,9 +2994,9 @@ else                               ApplyPresetFromOwnHeuristics()
 end
 ```
 
-> **Steam Deck, Steam Machine и Steam Frame.** `Storefront.IsSteamDeck()` работает точно так же, как раньше, но
-> теперь выводится из запроса устройства, который заменил удалённый `ISteamUtils::IsRunningOnSteamDeck()` в
-> Steamworks SDK **v1.65**, и потому знает также про Steam Machine и Steam Frame. Когда решение касается
+> **Steam Deck, Steam Machine и Steam Frame.** `Storefront.IsSteamDeck()`, `IsSteamMachine()` и `IsSteamFrame()`
+> читают тот же запрос устройства, что и `GetSteamHardware()`, — `ISteamUtils::IsRunningOnSteamHardware()` из
+> Steamworks SDK **v1.65**. Когда решение касается
 > *возможности*, а не отчётности, предпочитайте проверки возможностей (`GetHardwareDefaultConfig()`,
 > `IsBigPictureMode()`, `Storefront.Input.GetControllers()`, `GetBatteryPower()`) вместо проверок конкретного устройства.
 
@@ -3105,8 +3112,10 @@ Storefront.DismissGamepadTextInput()                               -> bool
 | Параметр | Тип | Описание |
 |-----------|------|-------------|
 | `mode` | `int` | Значение [`FloatingKeyboardMode`](#floatingkeyboardmode-enum) (`SingleLine` / `MultipleLines` / `Email` / `Numeric`) |
-| `x`, `y` | `int` | Положение левого верхнего угла (в пикселях экрана) текстового поля, рядом с которым должна стоять клавиатура |
-| `width`, `height` | `int` | Размер этого текстового поля |
+| `x`, `y` | `int` | Левый нижний угол текстового поля, рядом с которым должна стоять клавиатура, в пикселях экрана: начало координат в левом нижнем углу игрового вьюпорта, Y вверх — то же пространство, что у `GetMousePosition` и `Draw` в пространстве `screen` |
+| `width`, `height` | `int` | Размер этого текстового поля в пикселях |
+
+Сам Steam отсчитывает поле от левого верхнего угла окна игры; плагин переводит прямоугольник за вас.
 
 - `ShowFloatingGamepadTextInput` возвращает `true`, если показана.
 - `DismissFloatingGamepadTextInput` закрывает плавающую клавиатуру.
@@ -3880,8 +3889,8 @@ end
 Storefront.Timeline.StartGamePhase()
 Storefront.Timeline.EndGamePhase()
 Storefront.Timeline.SetGamePhaseId(phaseId)                     -- ваш собственный id, максимум 64 символа
-Storefront.Timeline.AddGamePhaseTag(tagName, tagIcon, tagGroup, priority)
-Storefront.Timeline.SetGamePhaseAttribute(group, value, priority)
+Storefront.Timeline.AddGamePhaseTag(tagName, tagIcon, tagGroup, priority)   -- priority необязателен, по умолчанию 0
+Storefront.Timeline.SetGamePhaseAttribute(group, value, priority)           -- priority необязателен, по умолчанию 0
 Storefront.Timeline.OpenOverlayToGamePhase(phaseId)
 Storefront.Timeline.OpenOverlayToEvent(event)
 ```
@@ -4264,7 +4273,9 @@ end
 ## 22. Справочник возвращаемых таблиц
 
 Сводный справочник по каждой таблице, возвращаемой API. Все массивы имеют **индексацию от 1**. Временные метки — это
-**Unix-секунды**. Байтовые поля — это **бинарно-безопасные строки Lua**.
+**Unix-секунды**. Байтовые поля — это **бинарно-безопасные строки Lua**. В редакторе визуальных скриптов ноды,
+возвращающие эти таблицы, и ноды, принимающие `UserHandle`, используют их как именованные типы пинов —
+`Table<UserHandle>`, `Array<Table<Friend>>`, … (см. [§25](#25-visual-scripting-nodes)).
 
 <a id="userhandle-table-ref"></a>
 ### UserHandle
@@ -4693,7 +4704,7 @@ Steam уже после игры или редактора: в логе появ
 `PauseGame()`. Проверьте, что плагин включён в `Config/Plugins.json`, что `Storefront.IsAvailable()` возвращает `true`
 и что сам колбэк не вызывает ошибку Lua: ошибка внутри колбэка перехватывается и пишется в лог движка как
 `[Steam] Lua callback error: …`. Ручной [`Storefront.Tick()`](#the-frame-tick--storefronttick) в `OnLevelUpdate`
-скрипта уровня не помешает, но он больше не является тем, что заставляет колбэки срабатывать. В редакторе плагин
+скрипта уровня не помешает, но колбэки срабатывают не из-за него. В редакторе плагин
 к тому же снимает все обработчики, когда Play останавливается, а всё, что зарегистрировано, пока Play не запущен,
 снимает раньше, чем оно успело бы сработать, — регистрируйте обработчики из скриптов вашей игры (см.
 [Время жизни колбэков](#callback-lifetime)).
@@ -4735,8 +4746,10 @@ Steam загружает изображения асинхронно. Первы
 
 Плагин поставляет собственный каталог визуального скриптинга — `VisualScriptAPI.json` в корне плагина.
 IceBoxEngineEditor автоматически загружает такие каталоги из папки каждого плагина, поэтому при наличии
-Storefront-плагина весь API `Storefront` также доступен в виде нод в редакторе визуальных скриптов. Никакой
-настройки движка не требуется.
+Storefront-плагина весь API `Storefront` также доступен в виде нод в редакторе визуальных скриптов. Тот же
+каталог читают редакторы Lua-скриптов для автодополнения: после `Storefront.`, `Storefront.Workshop.`,
+`Storefront.Input.` или `Storefront.Timeline.` они предлагают функции с их сигнатурами. Никакой настройки
+движка не требуется.
 
 ### Что вы получаете
 
@@ -4744,19 +4757,35 @@ Storefront-плагина весь API `Storefront` также доступен 
   сгруппированные по категориям в палитре нод: *Steam*, *Steam Achievements*, *Steam Stats*, *Steam Leaderboards*,
   *Steam Cloud*, *Steam Lobby*, *Steam P2P*, *Steam DLC*, *Steam Overlay*, *Steam Voice*, *Steam Friends*,
   *Steam Auth*, *Steam Device*, *Steam Events*, *Steam Workshop*, *Steam Input*, *Steam Timeline*.
-- **Выпадающие списки перечислений.** Аргументы, за которыми стоит перечисление `Storefront` (тип лобби,
-  сортировка / отображение / метод загрузки таблиц лидеров, диапазон выборки, канал и тип отправки P2P, режим
-  экранной клавиатуры, коды результата), получают пикер с полными выражениями `Storefront.<Enum>.<Value>` и уже
-  выбранным разумным значением по умолчанию.
-- **Типизированные пины.** У пинов настоящие типы, поэтому провода проверяются по типу. Функции, возвращающие
-  список, — `Get Friends`, `Get All Achievements`, `Cloud List`, `Get DLCs`, `Get Lobby Members`,
-  `Workshop: Get Subscribed`, `Input: Get Controllers` — выдают `Array<Table>`, а `Input: Get Digital Action Origins` /
-  `Input: Get Analog Action Origins` — `Array<Int>`: подключите такой выход к **For Each** и сразу получите `Index`
-  и `Element`. Функция, возвращающая таблицу или `nil` (`Get Local User`, `Get App Owner`, `Get Achievement`,
-  `Receive P2P`, `Workshop: Get Item Info`, `Workshop: Get Install Info`), выдаёт `Table`, результаты «текст или
-  `nil`» (`Get Pending Connect`, `Peek Pending Connect`, `Get Entered Gamepad Text`) — `String`, а
-  `Parse Connect Lobby` — `Int`. Результат, который может быть `nil`, проверяйте нодой **Is Valid** перед
-  использованием.
+- **Выпадающие списки перечислений.** Каждый аргумент, за которым стоит перечисление `Storefront`, — группа
+  возможностей, тип лобби, сортировка / отображение / метод загрузки таблиц лидеров, диапазон выборки, канал и тип
+  отправки P2P, режим экранной клавиатуры, режим игры для Timeline, позиция уведомлений оверлея, настройка
+  производительности, размер глифа и код результата — получает пикер с полными выражениями
+  `Storefront.<Enum>.<Value>` и уже выбранным разумным значением по умолчанию. Единственный необязательный такой
+  аргумент, размер глифа у `Input: Get Glyph PNG For Action Origin`, изначально пуст: если его так и оставить, он
+  не передаётся и работает значение по умолчанию самой функции — `Medium`. Результат со значением такого
+  перечисления — код `Result`, `Input: Get Input Type For Handle`, `User Has License For App`, … — это `Int`:
+  сравните его нодой **Equal**, переключив второй вход кнопкой **fx** в панели **Details** на Lua-выражение с
+  константой, например `Storefront.Result.Ok`.
+- **Типизированные пины.** У пинов настоящие типы, поэтому провода проверяются по типу, а таблицы из
+  [§22](#22-returned-tables-reference) — это отдельные типы. Функции, возвращающие список, выдают массив такой
+  таблицы: `Get Friends` — `Array<Table<Friend>>`, `Get All Achievements` — `Array<Table<Achievement>>`,
+  `Cloud List` — `Array<Table<CloudFile>>`, `Get DLCs` — `Array<Table<DLC>>`, `Get Lobby Members` —
+  `Array<Table<LobbyMember>>`, `Workshop: Get Subscribed` — `Array<Table<WorkshopItem>>`, `Input: Get Controllers` —
+  `Array<Table<Controller>>`, а `Input: Get Digital Action Origins` / `Input: Get Analog Action Origins` —
+  `Array<Int>`: подключите такой выход к **For Each** и сразу получите `Index` и `Element`. Функция, возвращающая
+  таблицу или `nil`, выдаёт эту таблицу: `Get Local User` и `Get App Owner` — `Table<UserHandle>`,
+  `Get Achievement` — `Table<Achievement>`, `Receive P2P` — `Table<P2PMessage>`, `Workshop: Get Item Info` —
+  `Table<WorkshopItem>`, `Workshop: Get Install Info` — обычную `Table`; результаты «текст или `nil`»
+  (`Get Pending Connect`, `Peek Pending Connect`, `Get Entered Gamepad Text`) — `String`, а `Parse Connect Lobby` —
+  `Int`. Результат, который может быть `nil`, проверяйте нодой **Is Valid** перед использованием.
+- **Пины пользователя.** Каждая нода, принимающая пользователя, — `Send P2P`, `Close P2P Session`,
+  `Activate Overlay To User`, `Invite Friend To Lobby`, `Get Friend Avatar`, `Get Friend Avatar RGBA`,
+  `Begin Auth Session`, `End Auth Session`, `User Has License For App` — имеет вход `Table<UserHandle>`. Таблицу
+  `Friend`, `LobbyMember` или другую именованную таблицу к нему не подключить, потому что это не пользователь:
+  достаньте из неё пользователя нодой **Get Field** (`user`, `owner` или `sender`) и передайте его. Выход обычной
+  `Table` или `Any` подключается к любому входу именованной таблицы, а именованная таблица — к любому входу
+  обычной `Table`.
 - **Несколько возвращаемых значений.** Функции, возвращающие несколько значений, дают по выходному пину на
   каждое — у `Get Stat Int` есть пины `Value` и `Result`, у `Get Image RGBA` — `Data`, `Width` и `Height`,
   у `Decompress Voice` — `Result`, `Data` и `SampleRate`, и так далее. Функция вызывается один раз и заполняет все
@@ -4776,16 +4805,8 @@ Storefront-плагина весь API `Storefront` также доступен 
   `Callback` отображается в панели **Problems**.
 
 Нода Tick не обязательна: как объяснено в [§3](#the-frame-tick--storefronttick), плагин сам каждый кадр доставляет
-результаты из очереди и колбэки событий. Нода **Tick** (категория *Steam Events*) остаётся необязательным явным
-сбросом очереди — например, прямо перед опросом `Receive P2P`.
-
-### Графы из старых версий редактора
-
-Граф, сохранённый старым редактором, обновляется при загрузке. Ноды, чей вид в этом каталоге изменился, —
-`Get Stat Int`, `Get Stat Float`, `Get Image RGBA`, `Get Achievement Icon RGBA` и `Get Friend Avatar RGBA` стали
-чистыми, `Get Pending Connect` стала нодой-действием — сохраняют в таком графе прежнюю раскладку пинов, поэтому
-существующие провода остаются рабочими. Чтобы перевести такую ноду на новую раскладку, замените её свежей нодой из
-палитры. Сохраните ассет один раз, чтобы записать обновлённый граф.
+результаты из очереди и колбэки событий. Нода **Tick** (категория *Steam Events*) — необязательный явный сброс
+очереди, например прямо перед опросом `Receive P2P`.
 
 ### Откуда берётся каталог
 
@@ -4794,8 +4815,8 @@ Storefront-плагина весь API `Storefront` также доступен 
 плагина: устанавливать, настраивать или перегенерировать нечего.
 
 Он выглядит артефактом сборки, но это не он: **это обязательный файл данных времени выполнения.** Удалите его — и
-все ноды `Storefront` молча исчезнут из палитры, без единой ошибки где бы то ни было. Держите его вместе с
-плагином и заменяйте вместе с библиотекой, когда берёте новый релиз.
+все ноды `Storefront` молча исчезнут из палитры, а функции `Storefront` — из автодополнения, без единой ошибки
+где бы то ни было. Держите его вместе с плагином и заменяйте вместе с библиотекой, когда берёте новый релиз.
 
 ---
 

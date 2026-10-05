@@ -1,5 +1,4 @@
 {
- "version": 2,
  "functions": [
   {
    "name": "CapabilityName",
@@ -68,7 +67,7 @@
    "title": "Get App Owner",
    "pure": true,
    "args": [],
-   "ret": "Table"
+   "ret": "Table<UserHandle>"
   },
   {
    "name": "GetBackend",
@@ -148,8 +147,7 @@
      "name": "Height",
      "type": "Int"
     }
-   ],
-   "legacyPure": false
+   ]
   },
   {
    "name": "GetLanguage",
@@ -195,7 +193,7 @@
    "title": "Get Local User",
    "pure": true,
    "args": [],
-   "ret": "Table"
+   "ret": "Table<UserHandle>"
   },
   {
    "name": "GetPersonaName",
@@ -456,7 +454,7 @@
      "opt": false
     }
    ],
-   "ret": "Table"
+   "ret": "Table<Achievement>"
   },
   {
    "name": "GetAchievementIcon",
@@ -502,8 +500,7 @@
      "name": "Height",
      "type": "Int"
     }
-   ],
-   "legacyPure": false
+   ]
   },
   {
    "name": "GetAllAchievements",
@@ -513,7 +510,7 @@
    "title": "Get All Achievements",
    "pure": true,
    "args": [],
-   "ret": "Array<Table>"
+   "ret": "Array<Table<Achievement>>"
   },
   {
    "name": "IndicateAchievementProgress",
@@ -582,7 +579,7 @@
     },
     {
      "name": "user",
-     "type": "Table",
+     "type": "Table<UserHandle>",
      "opt": false
     }
    ],
@@ -614,7 +611,7 @@
    "args": [
     {
      "name": "user",
-     "type": "Table",
+     "type": "Table<UserHandle>",
      "opt": false
     }
    ],
@@ -688,7 +685,7 @@
    "args": [
     {
      "name": "user",
-     "type": "Table",
+     "type": "Table<UserHandle>",
      "opt": false
     },
     {
@@ -733,7 +730,7 @@
    "title": "Cloud List",
    "pure": true,
    "args": [],
-   "ret": "Array<Table>"
+   "ret": "Array<Table<CloudFile>>"
   },
   {
    "name": "CloudQuotaAvailable",
@@ -810,7 +807,7 @@
    "title": "Get DLCs",
    "pure": true,
    "args": [],
-   "ret": "Array<Table>"
+   "ret": "Array<Table<DLC>>"
   },
   {
    "name": "InstallDLC",
@@ -1032,8 +1029,17 @@
    "args": [
     {
      "name": "setting",
-     "type": "Int",
-     "opt": false
+     "type": "Any",
+     "opt": false,
+     "values": [
+      "Storefront.PerformanceSetting.NotSet",
+      "Storefront.PerformanceSetting.Low",
+      "Storefront.PerformanceSetting.Medium",
+      "Storefront.PerformanceSetting.High",
+      "Storefront.PerformanceSetting.Ultra",
+      "Storefront.PerformanceSetting.Custom"
+     ],
+     "default": "Storefront.PerformanceSetting.NotSet"
     }
    ],
    "ret": "void"
@@ -1286,7 +1292,7 @@
    "args": [
     {
      "name": "User",
-     "type": "Table",
+     "type": "Table<UserHandle>",
      "opt": false
     },
     {
@@ -1307,7 +1313,7 @@
    "args": [
     {
      "name": "User",
-     "type": "Table",
+     "type": "Table<UserHandle>",
      "opt": false
     },
     {
@@ -1330,8 +1336,7 @@
      "name": "Height",
      "type": "Int"
     }
-   ],
-   "legacyPure": false
+   ]
   },
   {
    "name": "GetFriends",
@@ -1341,7 +1346,7 @@
    "title": "Get Friends",
    "pure": true,
    "args": [],
-   "ret": "Array<Table>"
+   "ret": "Array<Table<Friend>>"
   },
   {
    "name": "GetPendingConnect",
@@ -1351,8 +1356,7 @@
    "title": "Get Pending Connect",
    "pure": false,
    "args": [],
-   "ret": "String",
-   "legacyPure": true
+   "ret": "String"
   },
   {
    "name": "PeekPendingConnect",
@@ -1562,7 +1566,7 @@
    "title": "Input: Get Controllers",
    "pure": true,
    "args": [],
-   "ret": "Array<Table>"
+   "ret": "Array<Table<Controller>>"
   },
   {
    "name": "GetCurrentActionSet",
@@ -1674,8 +1678,13 @@
     },
     {
      "name": "size",
-     "type": "Int",
-     "opt": true
+     "type": "Any",
+     "opt": true,
+     "values": [
+      "Storefront.GlyphSize.Small",
+      "Storefront.GlyphSize.Medium",
+      "Storefront.GlyphSize.Large"
+     ]
     }
    ],
    "ret": "String"
@@ -2119,7 +2128,7 @@
      "opt": false
     }
    ],
-   "ret": "Array<Table>"
+   "ret": "Array<Table<LobbyMember>>"
   },
   {
    "name": "InviteFriendToLobby",
@@ -2136,7 +2145,7 @@
     },
     {
      "name": "User",
-     "type": "Table",
+     "type": "Table<UserHandle>",
      "opt": false
     }
    ],
@@ -2342,7 +2351,7 @@
     },
     {
      "name": "User",
-     "type": "Table",
+     "type": "Table<UserHandle>",
      "opt": false
     }
    ],
@@ -2405,8 +2414,15 @@
    "args": [
     {
      "name": "position",
-     "type": "Int",
-     "opt": false
+     "type": "Any",
+     "opt": false,
+     "values": [
+      "Storefront.OverlayNotificationPosition.TopLeft",
+      "Storefront.OverlayNotificationPosition.TopRight",
+      "Storefront.OverlayNotificationPosition.BottomLeft",
+      "Storefront.OverlayNotificationPosition.BottomRight"
+     ],
+     "default": "Storefront.OverlayNotificationPosition.TopLeft"
     }
    ],
    "ret": "void"
@@ -2421,7 +2437,7 @@
    "args": [
     {
      "name": "User",
-     "type": "Table",
+     "type": "Table<UserHandle>",
      "opt": false
     }
    ],
@@ -2435,7 +2451,7 @@
    "title": "Receive P2P",
    "pure": false,
    "args": [],
-   "ret": "Table"
+   "ret": "Table<P2PMessage>"
   },
   {
    "name": "SendP2P",
@@ -2447,7 +2463,7 @@
    "args": [
     {
      "name": "User",
-     "type": "Table",
+     "type": "Table<UserHandle>",
      "opt": false
     },
     {
@@ -2516,8 +2532,7 @@
      "name": "Result",
      "type": "Int"
     }
-   ],
-   "legacyPure": false
+   ]
   },
   {
    "name": "GetStatInt",
@@ -2543,8 +2558,7 @@
      "name": "Result",
      "type": "Int"
     }
-   ],
-   "legacyPure": false
+   ]
   },
   {
    "name": "RequestNumberOfCurrentPlayers",
@@ -2834,8 +2848,16 @@
    "args": [
     {
      "name": "mode",
-     "type": "Int",
-     "opt": false
+     "type": "Any",
+     "opt": false,
+     "values": [
+      "Storefront.TimelineGameMode.Invalid",
+      "Storefront.TimelineGameMode.Playing",
+      "Storefront.TimelineGameMode.Staging",
+      "Storefront.TimelineGameMode.Menus",
+      "Storefront.TimelineGameMode.LoadingScreen"
+     ],
+     "default": "Storefront.TimelineGameMode.Playing"
     }
    ],
    "ret": "void"
@@ -3097,7 +3119,7 @@
      "opt": false
     }
    ],
-   "ret": "Table"
+   "ret": "Table<WorkshopItem>"
   },
   {
    "name": "GetItemState",
@@ -3129,7 +3151,7 @@
      "opt": true
     }
    ],
-   "ret": "Array<Table>"
+   "ret": "Array<Table<WorkshopItem>>"
   },
   {
    "name": "GetUpdateProgress",

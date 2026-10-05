@@ -238,7 +238,7 @@ Three ways to turn it off, in order of precedence:
 > `steam_appid.txt` in particular belongs beside your build on your machine and nowhere else: it must not be in
 > a package you upload to Steam, and it must not be in a plugin package you hand to another developer.
 
-[`Storefront.RestartAppIfNecessary(appId)`](#185-storefrontrestartappifnecessary) is still exposed for the rare
+[`Storefront.RestartAppIfNecessary(appId)`](#185-storefrontrestartappifnecessary) is also exposed for the rare
 case where you want to drive the check yourself, but calling it from a level script is far too late to be the
 primary mechanism — Steam has already been initialized by then.
 
@@ -327,9 +327,8 @@ run that frame. The engine skips that step while the game is paused with `PauseG
 game resumes or something calls `Storefront.Tick()`. Widget scripts keep updating during a pause, so a widget's
 `OnUpdate` is the place for that call (see [`OnOverlayActivated`](#195-storefrontonoverlayactivated)).
 
-`Storefront.Tick()` remains available as an **explicit, optional** flush — call it when you want the queue drained
-at a specific point of your own frame (for example right before you read `Storefront.ReceiveP2P()` in a networked
-loop), or in code that was written against an earlier version of this plugin:
+`Storefront.Tick()` is an **explicit, optional** flush — call it when you want the queue drained at a specific point
+of your own frame, for example right before you read `Storefront.ReceiveP2P()` in a networked loop:
 
 ```lua
 -- Optional. In a long-lived manager entity (in a level script (.icemap) this goes into OnLevelUpdate):
@@ -2761,10 +2760,17 @@ An **analog action** is a 1- or 2-axis action (Move, Look, Throttle). `GetAnalog
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `x` | `float` | Horizontal axis (typically `-1`…`1`) |
-| `y` | `float` | Vertical axis (typically `-1`…`1`) |
+| `x` | `float` | Horizontal axis, X+ right |
+| `y` | `float` | Vertical axis, Y+ up |
 | `mode` | `int` | The source mode (joystick, trackpad, mouse, …) as reported by Steam |
 | `active` | `bool` | Whether the action is currently bound/active |
+
+`x` and `y` follow the engine's axes — X+ right, Y+ up — for both kinds of analog action in your action manifest:
+
+- **`joystick_move`** — the stick position, `-1`…`1`; pushed up gives `y = 1`, the same as `GetGamepadLeftStick`.
+- **`absolute_mouse`** (trackpad, gyro, mouse-style input) — the movement since the last frame, in pixels; moved up
+  gives a positive `y`, the same as `GetMouseDelta`. Steam itself reports this movement with Y growing downward, like
+  an operating-system mouse; the plugin turns it the right way up for you.
 
 `StopAnalogActionMomentum` cancels residual trackpad "flick" momentum for an action.
 
@@ -2796,6 +2802,7 @@ end
 Storefront.Input.GetDigitalActionOrigins(handle, actionSet, action) -> table
 Storefront.Input.GetAnalogActionOrigins(handle, actionSet, action)  -> table
 Storefront.Input.GetGlyphSVGForActionOrigin(origin)                 -> string
+Storefront.Input.GetGlyphPNGForActionOrigin(origin, size?)          -> string
 Storefront.Input.GetStringForActionOrigin(origin)                   -> string
 ```
 
@@ -2918,9 +2925,9 @@ else                               ApplyPresetFromOwnHeuristics()
 end
 ```
 
-> **Steam Deck, Steam Machine and Steam Frame.** `Storefront.IsSteamDeck()` still works exactly as before, but it
-> is now derived from the device query that replaced the removed `ISteamUtils::IsRunningOnSteamDeck()` in
-> Steamworks SDK **v1.65**, so it also knows about Steam Machine and Steam Frame. Prefer capability checks
+> **Steam Deck, Steam Machine and Steam Frame.** `Storefront.IsSteamDeck()`, `IsSteamMachine()` and
+> `IsSteamFrame()` read the same device query as `GetSteamHardware()` — `ISteamUtils::IsRunningOnSteamHardware()`
+> from Steamworks SDK **v1.65**. Prefer capability checks
 > (`GetHardwareDefaultConfig()`, `IsBigPictureMode()`, `Storefront.Input.GetControllers()`, `GetBatteryPower()`)
 > over device checks whenever the decision is about a *feature* rather than about reporting.
 
@@ -3035,8 +3042,10 @@ The **floating** keyboard is the non-modal Steam Deck keyboard you position next
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `mode` | `int` | A [`FloatingKeyboardMode`](#floatingkeyboardmode-enum) value (`SingleLine` / `MultipleLines` / `Email` / `Numeric`) |
-| `x`, `y` | `int` | Top-left position (screen pixels) of the text field the keyboard should sit beside |
-| `width`, `height` | `int` | Size of that text field |
+| `x`, `y` | `int` | Bottom-left corner of the text field the keyboard should sit beside, in screen pixels: origin at the bottom-left of the game viewport, Y up — the same space as `GetMousePosition` and `Draw` in `screen` space |
+| `width`, `height` | `int` | Size of that text field, in pixels |
+
+Steam itself measures the field from the top-left corner of the game window; the plugin converts the rectangle for it.
 
 - `ShowFloatingGamepadTextInput` returns `true` if shown.
 - `DismissFloatingGamepadTextInput` closes the floating keyboard.
@@ -3796,8 +3805,8 @@ metadata on the recording.
 Storefront.Timeline.StartGamePhase()
 Storefront.Timeline.EndGamePhase()
 Storefront.Timeline.SetGamePhaseId(phaseId)                     -- your own id, max 64 chars
-Storefront.Timeline.AddGamePhaseTag(tagName, tagIcon, tagGroup, priority)
-Storefront.Timeline.SetGamePhaseAttribute(group, value, priority)
+Storefront.Timeline.AddGamePhaseTag(tagName, tagIcon, tagGroup, priority)   -- priority optional, default 0
+Storefront.Timeline.SetGamePhaseAttribute(group, value, priority)           -- priority optional, default 0
 Storefront.Timeline.OpenOverlayToGamePhase(phaseId)
 Storefront.Timeline.OpenOverlayToEvent(event)
 ```
@@ -4177,7 +4186,9 @@ partner site without a game patch.
 ## 22. Returned Tables Reference
 
 A consolidated reference of every table the API returns. All arrays are **1-indexed**. Timestamps are **Unix
-seconds**. Byte fields are **binary-safe Lua strings**.
+seconds**. Byte fields are **binary-safe Lua strings**. In the Visual Script editor the nodes that return these
+tables, and the nodes that take a `UserHandle`, use them as named pin types — `Table<UserHandle>`,
+`Array<Table<Friend>>`, … (see [§25](#25-visual-scripting-nodes)).
 
 <a id="userhandle-table-ref"></a>
 ### UserHandle
@@ -4603,7 +4614,7 @@ editor that means Play mode, not edit mode — and is skipped while the game is 
 plugin is enabled in `Config/Plugins.json`, that `Storefront.IsAvailable()` returns `true`, and that the callback
 itself is not raising a Lua error: an error inside a callback is caught and written to the engine log as
 `[Steam] Lua callback error: …`. A manual [`Storefront.Tick()`](#the-frame-tick--storefronttick) in a level script's
-`OnLevelUpdate` will not hurt, but it is no longer what makes callbacks fire. In the editor the plugin also
+`OnLevelUpdate` will not hurt, but it is not what makes callbacks fire. In the editor the plugin also
 removes every handler when Play stops, and removes anything registered while Play is not running before it could
 fire — register handlers from the scripts of your game (see [Callback lifetime](#callback-lifetime)).
 
@@ -4642,7 +4653,9 @@ no-op. Guarding on `IsAvailable()` keeps one script working across all platforms
 
 The plugin ships its own visual-scripting catalog — `VisualScriptAPI.json` in the plugin root. The IceBoxEngineEditor
 loads such catalogs from every plugin folder automatically, so when the Storefront plugin is present the whole
-`Storefront` API is also available as nodes in the Visual Script editor. No engine configuration is required.
+`Storefront` API is also available as nodes in the Visual Script editor. The Lua script editors read the same catalog
+for their autocomplete: after `Storefront.`, `Storefront.Workshop.`, `Storefront.Input.` or `Storefront.Timeline.`
+they suggest the functions with their signatures. No engine configuration is required.
 
 ### What you get
 
@@ -4650,17 +4663,33 @@ loads such catalogs from every plugin folder automatically, so when the Storefro
   `Storefront.Timeline`, grouped into categories in the node palette: *Steam*, *Steam Achievements*, *Steam Stats*,
   *Steam Leaderboards*, *Steam Cloud*, *Steam Lobby*, *Steam P2P*, *Steam DLC*, *Steam Overlay*, *Steam Voice*,
   *Steam Friends*, *Steam Auth*, *Steam Device*, *Steam Events*, *Steam Workshop*, *Steam Input*, *Steam Timeline*.
-- **Enum dropdowns.** Arguments backed by a `Storefront` enum (lobby type, leaderboard sort / display / upload
-  method, download range, P2P channel and send type, floating keyboard mode, result codes) get a dropdown picker
-  with the full `Storefront.<Enum>.<Value>` expressions and a sensible default already selected.
-- **Typed pins.** Pins carry real types, so wires are type-checked. Functions that return a list — `Get Friends`,
-  `Get All Achievements`, `Cloud List`, `Get DLCs`, `Get Lobby Members`, `Workshop: Get Subscribed`,
-  `Input: Get Controllers` — output an `Array<Table>`, and `Input: Get Digital Action Origins` /
-  `Input: Get Analog Action Origins` output an `Array<Int>`: connect one to **For Each** and you get `Index` and
-  `Element` directly. A function that returns a table or `nil` (`Get Local User`, `Get App Owner`, `Get Achievement`,
-  `Receive P2P`, `Workshop: Get Item Info`, `Workshop: Get Install Info`) outputs a `Table`, text-or-`nil` results
-  (`Get Pending Connect`, `Peek Pending Connect`, `Get Entered Gamepad Text`) output a `String`, and
-  `Parse Connect Lobby` outputs an `Int`. Check a result that can be `nil` with **Is Valid** before using it.
+- **Enum dropdowns.** Every argument backed by a `Storefront` enum — capability, lobby type, leaderboard sort /
+  display / upload method, download range, P2P channel and send type, floating keyboard mode, timeline game mode,
+  overlay notification position, performance setting, glyph size and result code — gets a dropdown picker with the
+  full `Storefront.<Enum>.<Value>` expressions and a sensible default already selected. The one optional enum
+  argument, the glyph size of `Input: Get Glyph PNG For Action Origin`, starts empty: left that way it is not
+  passed, and the function's own default, `Medium`, applies. A result that holds one of these enums — a `Result`
+  code, `Input: Get Input Type For Handle`, `User Has License For App`, … — is an `Int`: compare it with **Equal**
+  and switch the other input to a Lua expression with **fx** in the **Details** panel to type the constant, e.g.
+  `Storefront.Result.Ok`.
+- **Typed pins.** Pins carry real types, so wires are type-checked, and the tables of
+  [§22](#22-returned-tables-reference) are types of their own. Functions that return a list output an array of one
+  of them — `Get Friends` an `Array<Table<Friend>>`, `Get All Achievements` an `Array<Table<Achievement>>`,
+  `Cloud List` an `Array<Table<CloudFile>>`, `Get DLCs` an `Array<Table<DLC>>`, `Get Lobby Members` an
+  `Array<Table<LobbyMember>>`, `Workshop: Get Subscribed` an `Array<Table<WorkshopItem>>`, `Input: Get Controllers`
+  an `Array<Table<Controller>>` — and `Input: Get Digital Action Origins` / `Input: Get Analog Action Origins` output
+  an `Array<Int>`: connect one to **For Each** and you get `Index` and `Element` directly. A function that returns a
+  table or `nil` outputs that table — `Get Local User` and `Get App Owner` a `Table<UserHandle>`, `Get Achievement`
+  a `Table<Achievement>`, `Receive P2P` a `Table<P2PMessage>`, `Workshop: Get Item Info` a `Table<WorkshopItem>` and
+  `Workshop: Get Install Info` a plain `Table`; text-or-`nil` results (`Get Pending Connect`, `Peek Pending Connect`,
+  `Get Entered Gamepad Text`) output a `String`, and `Parse Connect Lobby` outputs an `Int`. Check a result that
+  can be `nil` with **Is Valid** before using it.
+- **User pins.** Every node that takes a user — `Send P2P`, `Close P2P Session`, `Activate Overlay To User`,
+  `Invite Friend To Lobby`, `Get Friend Avatar`, `Get Friend Avatar RGBA`, `Begin Auth Session`,
+  `End Auth Session`, `User Has License For App` — has a `Table<UserHandle>` input. A `Friend`, a `LobbyMember` or
+  any other named table is refused there, because it is not a user: read the user out of it with **Get Field**
+  (`user`, `owner` or `sender`) and pass that. A plain `Table` or an `Any` output connects to every named table
+  input, and a named table connects to every plain `Table` input.
 - **Multiple return values.** Functions that return several values expose one output pin per value —
   `Get Stat Int` has `Value` and `Result` pins, `Get Image RGBA` has `Data`, `Width` and `Height`,
   `Decompress Voice` has `Result`, `Data` and `SampleRate`, and so on. The function is called once and fills every
@@ -4679,16 +4708,8 @@ loads such catalogs from every plugin folder automatically, so when the Storefro
   receive. A `Callback` pin left unconnected is reported in the **Problems** panel.
 
 No Tick node is required: as [§3](#the-frame-tick--storefronttick) explains, the plugin delivers queued results and
-event callbacks every frame on its own. The **Tick** node (category *Steam Events*) remains an optional, explicit
+event callbacks every frame on its own. The **Tick** node (category *Steam Events*) is an optional, explicit
 flush — for example right before you poll `Receive P2P`.
-
-### Graphs made with older editor versions
-
-A graph saved by an older editor is upgraded when it loads. The nodes whose kind changed in this catalog —
-`Get Stat Int`, `Get Stat Float`, `Get Image RGBA`, `Get Achievement Icon RGBA` and `Get Friend Avatar RGBA` became
-pure nodes, `Get Pending Connect` became an action node — keep their old pin layout in such a graph, so existing wires
-stay valid. To give one of them the new layout, replace it with a fresh node from the palette. Save the asset once to
-store the upgraded graph.
 
 ### Where the catalog comes from
 
@@ -4697,8 +4718,9 @@ bindings before each release — so it always matches the library it came with. 
 the plugin folder; there is nothing to install, configure or regenerate.
 
 It looks like a build artifact and it is not: **it is a required run-time data file.** Delete it and every
-`Storefront` node silently disappears from the palette, with no error anywhere. Keep it with the plugin, and
-replace it together with the library whenever you take a new release.
+`Storefront` node silently disappears from the palette, and the `Storefront` functions from the autocomplete,
+with no error anywhere. Keep it with the plugin, and replace it together with the library whenever you take a
+new release.
 
 ---
 
