@@ -256,9 +256,10 @@ compiled plugin binaries on top. A few things are worth knowing:
 - **The Steam runtime library travels with the plugin.** `steam_api64.dll` / `libsteam_api.so` /
   `libsteam_api.dylib` is deployed into the plugin folder next to `IceBoxStorefront.dll`/`.so`/`.dylib` on every
   desktop platform, which is the only location all three dynamic loaders agree on. Do not move it.
-- **Everything else in the plugin folder ships too**, including `Documentation/`. Nothing breaks if you leave it,
-  but it is roughly 400 KB of markdown you probably do not want in a release — delete it from the staged output
-  (or from your project's `Plugins/IceBoxStorefront/`) if package size matters. `LICENSE.txt`, `NOTICE.md` and
+- **`Documentation/` stays out of the game.** It is editor-only data — this very reference, which the editor shows
+  in **Help → Documentation** — so the build leaves the folder out on its own.
+- **The rest of the plugin folder ships too.** `README.md` is optional there: nothing breaks if you leave it, and
+  you can delete it from the staged output if package size matters. `LICENSE.txt`, `NOTICE.md` and
   `THIRD_PARTY_NOTICES.txt` stay: the last one is what satisfies the attribution sol2, Lua, nlohmann/json and fmt
   require, and it is a few kilobytes.
 
@@ -274,7 +275,8 @@ the answer there is short: **no**.
 | `IceBoxStorefront.dll` / `.so` / `.dylib` (the plugin) | ✅ required | 🚫 no — send them the download link |
 | `plugin.json`, `VisualScriptAPI.json`, `icon.png` | ✅ required | 🚫 no |
 | `LICENSE.txt`, `NOTICE.md`, `THIRD_PARTY_NOTICES.txt` | ✅ keep them in the folder | — |
-| `Documentation/`, `README.md` | optional | — |
+| `README.md` | optional | — |
+| `Documentation/` | no — the build leaves it out | — |
 | `steam_api64.dll` / `libsteam_api.so` / `libsteam_api.dylib` | ✅ yes — Valve permits this | 🚫 **never** |
 | `steam_config.json` | ✅ yes — your game reads its AppId from it | 🚫 never — it holds *your* AppId |
 | `steam_appid.txt` | 🚫 never — delete it before you upload | 🚫 never |

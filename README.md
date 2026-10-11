@@ -83,7 +83,8 @@ table appears in Lua and the nodes appear in the Visual Script editor. Nothing e
 
 The reference covers every function, enum, callback and returned table, with signatures, parameter
 tables and runnable examples. It is the complete description of the API — you do not have the sources,
-and you do not need them.
+and you do not need them. With the plugin folder in place the editor shows it too: **Help →
+Documentation** lists both references under **IceBoxStorefront**, next to the engine manuals.
 
 ```lua
 if Storefront.IsAvailable() then
@@ -107,7 +108,8 @@ without Steam. Guard with `Storefront.IsAvailable()` when you want to branch.
   node.
 - `icon.png` — 256×256 plugin icon, shown in the editor's Plugins panel and in the launcher's
   Plugins & Mods tab. Drop it and the plugin shows up as a blank tile.
-- `Documentation/` — the full API reference, about 400 KB of Markdown. Optional at run time.
+- `Documentation/` — the full API reference, about 400 KB of Markdown. The editor reads it for its
+  Documentation panel; a game build leaves the folder out.
 - `LICENSE.txt`, `NOTICE.md`, `THIRD_PARTY_NOTICES.txt` — keep them in the folder.
   `THIRD_PARTY_NOTICES.txt` is what satisfies the attribution sol2, Lua, nlohmann/json and fmt require.
 
@@ -133,7 +135,8 @@ Things that are easy to get wrong and produce no error when you do — the full 
   AppId from.
 - **Leave the Steam runtime in the plugin folder.** Distributing it *with your game* is permitted to you
   by Section 1.1 of your own Steamworks SDK Access Agreement.
-- **`Documentation/` ships as-is** unless you delete it. Nothing breaks either way.
+- **`Documentation/` never ships.** It is editor-only data, so **Tools → Build Game** leaves it out of
+  the game on its own.
 - **The editor initializes Steam too.** With a valid AppId, running the editor marks you as playing the
   game on Steam and lets you unlock real achievements from Play mode. That is deliberate — it is how you
   test — but use AppId `480` or disable the plugin while you are not testing Steam.
