@@ -64,9 +64,10 @@ differently.
 "Plugin" and "Software" mean the IceBoxStorefront Plugin as we supply it:
 the compiled plugin library (IceBoxStorefront.dll, IceBoxStorefront.so or
 IceBoxStorefront.dylib), plugin.json, VisualScriptAPI.json, icon.png, the
-contents of Documentation/, README.md, NOTICE.md, DISTRIBUTION.md, this
-License, THIRD_PARTY_NOTICES.txt, and every other file we author and supply in
-the package or in the public repository - except for what Section 3 excludes.
+contents of Documentation/, README.md, README-RU.md, NOTICE.md,
+DISTRIBUTION.md, this License, THIRD_PARTY_NOTICES.txt, and every other file
+we author and supply in the package or in the public repository - except for
+what Section 3 excludes.
 
 "Your Game" means an interactive software application that You develop with
 IceBoxEngine and distribute to end users, in which the Plugin is one

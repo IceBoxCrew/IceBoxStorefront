@@ -93,8 +93,8 @@ How it actually reaches you:
   * At run time the plugin loads the Steam runtime library
     (steam_api64.dll / libsteam_api.so / libsteam_api.dylib) out of its own
     folder. That file comes from YOUR copy of the SDK - you copy it there
-    once out of redistributable_bin/, as README.md describes. It is the only
-    file out of the SDK the plugin needs.
+    once out of redistributable_bin/, as README.md and README-RU.md
+    describe. It is the only file out of the SDK the plugin needs.
 
 Obligations that follow you, not IceBoxCrew Studio:
 

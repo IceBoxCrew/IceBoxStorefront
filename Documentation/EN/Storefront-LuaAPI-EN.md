@@ -258,10 +258,10 @@ compiled plugin binaries on top. A few things are worth knowing:
   desktop platform, which is the only location all three dynamic loaders agree on. Do not move it.
 - **`Documentation/` stays out of the game.** It is editor-only data — this very reference, which the editor shows
   in **Help → Documentation** — so the build leaves the folder out on its own.
-- **The rest of the plugin folder ships too.** `README.md` is optional there: nothing breaks if you leave it, and
-  you can delete it from the staged output if package size matters. `LICENSE.txt`, `NOTICE.md` and
-  `THIRD_PARTY_NOTICES.txt` stay: the last one is what satisfies the attribution sol2, Lua, nlohmann/json and fmt
-  require, and it is a few kilobytes.
+- **The rest of the plugin folder ships too.** `README.md` and `README-RU.md` are optional there: nothing breaks
+  if you leave them, and you can delete them from the staged output if package size matters. `LICENSE.txt`,
+  `NOTICE.md` and `THIRD_PARTY_NOTICES.txt` stay: the last one is what satisfies the attribution sol2, Lua,
+  nlohmann/json and fmt require, and it is a few kilobytes.
 
 <a id="shipping-the-plugin-itself"></a>
 ### Passing the *plugin* on is a different question — and the answer is: don't
@@ -275,7 +275,7 @@ the answer there is short: **no**.
 | `IceBoxStorefront.dll` / `.so` / `.dylib` (the plugin) | ✅ required | 🚫 no — send them the download link |
 | `plugin.json`, `VisualScriptAPI.json`, `icon.png` | ✅ required | 🚫 no |
 | `LICENSE.txt`, `NOTICE.md`, `THIRD_PARTY_NOTICES.txt` | ✅ keep them in the folder | — |
-| `README.md` | optional | — |
+| `README.md`, `README-RU.md` | optional | — |
 | `Documentation/` | no — the build leaves it out | — |
 | `steam_api64.dll` / `libsteam_api.so` / `libsteam_api.dylib` | ✅ yes — Valve permits this | 🚫 **never** |
 | `steam_config.json` | ✅ yes — your game reads its AppId from it | 🚫 never — it holds *your* AppId |

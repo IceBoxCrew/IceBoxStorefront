@@ -27,7 +27,7 @@ Plugins/IceBoxStorefront/
 ├── steam_config.json                    your AppId        — you create it
 ├── LICENSE.txt  NOTICE.md
 ├── THIRD_PARTY_NOTICES.txt
-├── README.md  DISTRIBUTION.md
+├── README.md  README-RU.md  DISTRIBUTION.md
 └── Documentation/EN/…  Documentation/RU/…
 ```
 
@@ -60,8 +60,9 @@ notice has to travel with it. It is a few kilobytes.
 in **Help → Documentation** — editor-only data, so **Tools → Build Game** leaves the
 folder out of the game on its own.
 
-**`README.md` may go.** Your players do not need it. Nothing breaks if you leave it;
-delete it from the staged build if package size matters to you.
+**`README.md` and `README-RU.md` may go.** Your players do not need them. Nothing
+breaks if you leave them; delete them from the staged build if package size matters
+to you.
 
 ---
 
@@ -151,7 +152,7 @@ minute, for free — the same page you got it from.
 | `IceBoxStorefront.dll` / `.so` / `.dylib` | ✅ required | 🚫 no — send them the download link |
 | `plugin.json`, `VisualScriptAPI.json`, `icon.png` | ✅ required | 🚫 no |
 | `LICENSE.txt`, `NOTICE.md`, `THIRD_PARTY_NOTICES.txt` | ✅ keep them | — |
-| `README.md` | optional | — |
+| `README.md`, `README-RU.md` | optional | — |
 | `Documentation/` | no — the build leaves it out | — |
 | `steam_api64.dll` / `libsteam_api.so` / `.dylib` | ✅ yes — Valve permits this | 🚫 **never** |
 | `steam_config.json` | ✅ yes — your game reads its AppId from it | 🚫 never — it holds *your* AppId |
@@ -196,7 +197,7 @@ Plugins/IceBoxStorefront/
 ├── steam_config.json                    ваш AppId         — создаёте вы
 ├── LICENSE.txt  NOTICE.md
 ├── THIRD_PARTY_NOTICES.txt
-├── README.md  DISTRIBUTION.md
+├── README.md  README-RU.md  DISTRIBUTION.md
 └── Documentation/EN/…  Documentation/RU/…
 ```
 
@@ -227,8 +228,9 @@ nlohmann/json и fmt: они вкомпилированы в библиотек�
 показывает в **Help → Documentation**, — данные только для редактора, поэтому
 **Tools → Build Game** сам оставляет эту папку за бортом игры.
 
-**`README.md` можно убрать.** Вашим игрокам он не нужен. Ничего не сломается, если
-оставить; удалите из подготовленного билда, если вам важен размер пакета.
+**`README.md` и `README-RU.md` можно убрать.** Вашим игрокам они не нужны. Ничего не
+сломается, если оставить; удалите их из подготовленного билда, если вам важен размер
+пакета.
 
 ---
 
@@ -319,7 +321,7 @@ nlohmann/json и fmt: они вкомпилированы в библиотек�
 | `IceBoxStorefront.dll` / `.so` / `.dylib` | ✅ обязательно | 🚫 нет — дайте ссылку на загрузку |
 | `plugin.json`, `VisualScriptAPI.json`, `icon.png` | ✅ обязательно | 🚫 нет |
 | `LICENSE.txt`, `NOTICE.md`, `THIRD_PARTY_NOTICES.txt` | ✅ оставьте на месте | — |
-| `README.md` | по желанию | — |
+| `README.md`, `README-RU.md` | по желанию | — |
 | `Documentation/` | нет — сборка сама оставляет её за бортом | — |
 | `steam_api64.dll` / `libsteam_api.so` / `.dylib` | ✅ да — Valve это разрешает | 🚫 **никогда** |
 | `steam_config.json` | ✅ да — игра читает оттуда AppId | 🚫 никогда — там *ваш* AppId |

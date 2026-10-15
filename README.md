@@ -2,6 +2,10 @@
   <img src="icon.png" alt="IceBoxStorefront Logo" width="200">
 </p>
 
+<p align="center">
+  <b>English</b> · <a href="README-RU.md">Русский</a>
+</p>
+
 # IceBoxStorefront Plugin - Release 1.0.1
 
 **Steamworks integration for IceBoxEngine.** Windows · Linux · macOS.
