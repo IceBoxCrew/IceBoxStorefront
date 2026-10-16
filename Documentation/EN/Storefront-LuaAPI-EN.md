@@ -2242,8 +2242,8 @@ plugin applies your fields and submits the upload.
 |-------|------|-------------|
 | `title` | `string` | Item title |
 | `description` | `string` | Item description |
-| `contentFolder` | `string` | Absolute path to the folder whose contents become the item payload |
-| `previewImagePath` | `string` | Absolute path to a preview image (JPG/PNG, ≤ 1 MB) |
+| `contentFolder` | `string` | Absolute path to the folder whose contents become the item payload. It must lie inside the game folders (see the note below) |
+| `previewImagePath` | `string` | Absolute path to a preview image (JPG/PNG, ≤ 1 MB), inside the game folders like `contentFolder` |
 | `visibility` | `int` | A [`WorkshopVisibility`](#workshopvisibility-enum) value (defaults to `Public`; omit the field to leave Steam's own default alone on an update) |
 | `tags` | `table` | 1-indexed array of tag strings |
 | `metadata` | `string` | Developer metadata, up to 10 000 characters — your own machine-readable blob (mod format version, entry script, required engine API), invisible to players and returned by [`QueryItemsByIds`](#1411-storefrontworkshopqueryitemsbyids) |
@@ -2284,6 +2284,13 @@ end)
 
 > **Tags must already exist in your app's Workshop configuration** on the Steamworks partner site. Steam rejects
 > tags it does not know about, and the upload fails with a generic backend error.
+
+> **Uploads stay inside the game folders.** Any script can call `CreateItem` and `UpdateItem`, Workshop mods
+> included, so before Steam reads anything the plugin passes `contentFolder` and `previewImagePath` through the
+> engine's rules for file paths that scripts hand over (engine Lua API, section 41.3): they must lie inside the
+> project folder, the game's data folders or the folder of a discovered mod, and `..` is not allowed. A refused
+> path makes the callback receive `Result.PermissionDenied` and logs a warning. The check needs an engine whose
+> `RuntimeHostAPI` provides `CheckScriptPath`; on an older engine the paths go to Steam unchecked.
 
 ---
 
@@ -2557,6 +2564,12 @@ MyWorkshopMod/          <- the folder you pass to Workshop.CreateItem as content
 ├── main.lua            <- EntryScript; gets MOD_NAME / MOD_VERSION / MOD_DIR and ModRequire()
 └── ...                 <- anything else the mod loads through MOD_DIR
 ```
+
+Steam puts the item's files straight into its install folder, so `mod.json` sits at the root of
+`item.installFolder`, and `Mods.AddSearchPath` registers a folder like that as that one mod (a search path without
+a `mod.json` of its own is still scanned for mod subfolders, like `Mods/`). Older engines only scanned subfolders
+and did not see such an item — use the engine release this plugin build is made for. Scripts can read the files of
+a mounted Workshop mod; writing into it is refused, because the folder belongs to Steam.
 
 Practical notes for a Workshop-driven mod pipeline:
 
