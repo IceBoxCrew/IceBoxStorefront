@@ -149,8 +149,16 @@ folder once:
 | Platform | File | From |
 | --- | --- | --- |
 | Windows x64 | `steam_api64.dll` | `redistributable_bin/win64/` |
+| Windows x86 | `steam_api.dll` | `redistributable_bin/` |
 | Linux x64 | `libsteam_api.so` | `redistributable_bin/linux64/` |
-| macOS | `libsteam_api.dylib` | `redistributable_bin/osx/` |
+| Linux x86 | `libsteam_api.so` | `redistributable_bin/linux32/` |
+| Linux arm64 | `libsteam_api.so` | `redistributable_bin/linuxarm64/` |
+| macOS arm64 | `libsteam_api.dylib` | `redistributable_bin/osx/` |
+| macOS x64 | `libsteam_api.dylib` | `redistributable_bin/osx/` |
+
+Take the file for the same architecture as the release archive you unpacked. On macOS that is one universal
+`libsteam_api.dylib` for both the arm64 and the x64 archive. There is no Windows ARM64 build: Valve ships no
+Steam runtime for ARM64 Windows.
 
 The headers and the import library matter only to whoever compiles the plugin, and that is not you: the plugin
 arrives already built. When **shipping your game**, the compiled `IceBoxStorefront` library and that runtime

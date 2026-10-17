@@ -34,8 +34,8 @@ Plugins/IceBoxStorefront/
 Four of those files are **required at run time** and are easy to delete by mistake:
 
 - **`IceBoxStorefront.dll` / `IceBoxStorefront.so` / `IceBoxStorefront.dylib`** — the
-  plugin itself. One per platform; an `IceBoxStorefront.dll` is of no use to a Linux
-  build.
+  plugin itself. One per platform and architecture; an `IceBoxStorefront.dll` is of no
+  use to a Linux build.
 - **`steam_api64.dll` / `libsteam_api.so` / `libsteam_api.dylib`** — Valve's runtime.
   It must sit **in the plugin folder**, beside the plugin library: that is the one
   location all three dynamic loaders agree on. On Windows the plugin loads it from
@@ -86,11 +86,11 @@ beside the built game during development and delete it from the uploaded build.
 `steam_config.json`, on the other hand, **does** ship: it is where your released game
 reads its AppId from.
 
-### 3. Ship one plugin build per platform
+### 3. Ship one plugin build per platform and architecture
 
 The plugin links the same Lua the engine does, so a build is tied to an engine version
-*and* a platform. Take the release archive that matches your engine version, and take
-one archive per platform you publish on.
+*and* a platform and architecture. Take the release archive that matches your engine
+version, and take one archive per platform and architecture you publish on.
 
 ### 4. Remember the editor initializes Steam too
 
@@ -108,7 +108,7 @@ not testing Steam.
 | File | Where it comes from |
 |---|---|
 | `steam_api.dll`, `steam_api64.dll` | `redistributable_bin/` |
-| `libsteam_api.so`, `libsteam_api.dylib` | `redistributable_bin/linux64`, `/osx` |
+| `libsteam_api.so`, `libsteam_api.dylib` | `redistributable_bin/linux64`, `/linux32`, `/linuxarm64`, `/osx` |
 | `steam_api.lib`, `steam_api64.lib` | `redistributable_bin/` |
 | `sdkencryptedappticket.*` | `public/steam/lib/` |
 | `steamclient*.dll`, `tier0_s.dll`, `vstdlib_s.dll` | Steam client libraries |
@@ -204,7 +204,8 @@ Plugins/IceBoxStorefront/
 Четыре из этих файлов **обязательны во время выполнения** и их легко удалить по ошибке:
 
 - **`IceBoxStorefront.dll` / `IceBoxStorefront.so` / `IceBoxStorefront.dylib`** — сам
-  плагин. По одному на платформу: `IceBoxStorefront.dll` бесполезен для сборки под Linux.
+  плагин. По одному на платформу и архитектуру: `IceBoxStorefront.dll` бесполезен для сборки
+  под Linux.
 - **`steam_api64.dll` / `libsteam_api.so` / `libsteam_api.dylib`** — рантайм Valve.
   Он должен лежать **в папке плагина**, рядом с библиотекой плагина: это единственное
   место, с которым согласны все три динамических загрузчика. На Windows плагин грузит
@@ -255,11 +256,11 @@ nlohmann/json и fmt: они вкомпилированы в библиотек�
 `steam_config.json`, наоборот, **уезжает с игрой**: именно оттуда выпущенная игра читает
 свой AppId.
 
-### 3. По одной сборке плагина на платформу
+### 3. По одной сборке плагина на платформу и архитектуру
 
 Плагин линкует ту же Lua, что и движок, поэтому сборка привязана и к версии движка, и к
-платформе. Берите архив релиза под свою версию движка — и по одному архиву на каждую
-платформу, под которую вы публикуетесь.
+платформе с архитектурой. Берите архив релиза под свою версию движка — и по одному архиву
+на каждую платформу и архитектуру, под которые вы публикуетесь.
 
 ### 4. Помните, что редактор тоже инициализирует Steam
 
@@ -277,7 +278,7 @@ nlohmann/json и fmt: они вкомпилированы в библиотек�
 | Файл | Откуда он |
 |---|---|
 | `steam_api.dll`, `steam_api64.dll` | `redistributable_bin/` |
-| `libsteam_api.so`, `libsteam_api.dylib` | `redistributable_bin/linux64`, `/osx` |
+| `libsteam_api.so`, `libsteam_api.dylib` | `redistributable_bin/linux64`, `/linux32`, `/linuxarm64`, `/osx` |
 | `steam_api.lib`, `steam_api64.lib` | `redistributable_bin/` |
 | `sdkencryptedappticket.*` | `public/steam/lib/` |
 | `steamclient*.dll`, `tier0_s.dll`, `vstdlib_s.dll` | библиотеки клиента Steam |

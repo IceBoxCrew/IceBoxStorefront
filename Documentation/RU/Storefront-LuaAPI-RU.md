@@ -156,8 +156,16 @@ Agreement* от Valve. Valve лицензирует SDK этому разраб�
 | Платформа | Файл | Откуда |
 | --- | --- | --- |
 | Windows x64 | `steam_api64.dll` | `redistributable_bin/win64/` |
+| Windows x86 | `steam_api.dll` | `redistributable_bin/` |
 | Linux x64 | `libsteam_api.so` | `redistributable_bin/linux64/` |
-| macOS | `libsteam_api.dylib` | `redistributable_bin/osx/` |
+| Linux x86 | `libsteam_api.so` | `redistributable_bin/linux32/` |
+| Linux arm64 | `libsteam_api.so` | `redistributable_bin/linuxarm64/` |
+| macOS arm64 | `libsteam_api.dylib` | `redistributable_bin/osx/` |
+| macOS x64 | `libsteam_api.dylib` | `redistributable_bin/osx/` |
+
+Берите файл той же архитектуры, что и распакованный архив релиза. На macOS это один универсальный
+`libsteam_api.dylib` и для архива arm64, и для архива x64. Сборки под Windows ARM64 нет: Valve не выпускает
+рантайм Steam для Windows на ARM64.
 
 Заголовки и импортная библиотека нужны только тому, кто компилирует плагин, а это не вы: плагин приходит уже
 собранным. При **выпуске вашей игры** скомпилированная библиотека `IceBoxStorefront` и этот рантайм едут внутри

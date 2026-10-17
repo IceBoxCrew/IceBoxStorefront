@@ -27,7 +27,7 @@ P2P-сеть, голосовой чат, Мастерская (UGC), DLC, бил
 
 ## Где скачать
 
-Скачайте архив релиза под **вашу платформу и вашу версию движка** со страницы
+Скачайте архив релиза под **вашу платформу, вашу архитектуру и вашу версию движка** со страницы
 [Releases](https://github.com/IceBoxCrew/IceBoxStorefront/releases) или с itch.io. В этом репозитории лежит
 всё, что нужно папке плагина, *кроме* скомпилированной библиотеки: манифест, каталог нод, иконка, документация
 и юридические тексты. Так что клон репозитория — это папка плагина, которой не хватает всего одного файла.
@@ -46,8 +46,16 @@ P2P-сеть, голосовой чат, Мастерская (UGC), DLC, бил
 | Платформа | Файл | Откуда |
 | --- | --- | --- |
 | Windows x64 | `steam_api64.dll` | `redistributable_bin/win64/` |
+| Windows x86 | `steam_api.dll` | `redistributable_bin/` |
 | Linux x64 | `libsteam_api.so` | `redistributable_bin/linux64/` |
-| macOS | `libsteam_api.dylib` | `redistributable_bin/osx/` |
+| Linux x86 | `libsteam_api.so` | `redistributable_bin/linux32/` |
+| Linux arm64 | `libsteam_api.so` | `redistributable_bin/linuxarm64/` |
+| macOS arm64 | `libsteam_api.dylib` | `redistributable_bin/osx/` |
+| macOS x64 | `libsteam_api.dylib` | `redistributable_bin/osx/` |
+
+Берите файл той же архитектуры, что и распакованный архив. На macOS это один универсальный
+`libsteam_api.dylib` и для архива arm64, и для архива x64. Сборки под Windows ARM64 нет: Valve не выпускает
+рантайм Steam для Windows на ARM64.
 
 Папка плагина — единственное место, с которым согласны все три динамических загрузчика: на Windows плагин
 загружает рантайм оттуда явно, на Linux плагин несёт RPATH `$ORIGIN`, а на macOS `libsteam_api.dylib` собран с

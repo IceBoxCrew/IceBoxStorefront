@@ -26,7 +26,7 @@ Steam Deck / Steam Machine / Steam Frame support.
 
 ## Get it
 
-Download the release archive for **your platform and your engine version** from
+Download the release archive for **your platform, your architecture and your engine version** from
 [Releases](https://github.com/IceBoxCrew/IceBoxStorefront/releases) or from itch.io. This repository
 holds everything the plugin folder needs *except* the compiled library — the manifest, the node catalog,
 the icon, the documentation and the legal texts — so a clone is a plugin folder waiting for one file.
@@ -44,8 +44,16 @@ into the plugin folder, next to `IceBoxStorefront.dll` / `IceBoxStorefront.so` /
 | Platform | File | From |
 | --- | --- | --- |
 | Windows x64 | `steam_api64.dll` | `redistributable_bin/win64/` |
+| Windows x86 | `steam_api.dll` | `redistributable_bin/` |
 | Linux x64 | `libsteam_api.so` | `redistributable_bin/linux64/` |
-| macOS | `libsteam_api.dylib` | `redistributable_bin/osx/` |
+| Linux x86 | `libsteam_api.so` | `redistributable_bin/linux32/` |
+| Linux arm64 | `libsteam_api.so` | `redistributable_bin/linuxarm64/` |
+| macOS arm64 | `libsteam_api.dylib` | `redistributable_bin/osx/` |
+| macOS x64 | `libsteam_api.dylib` | `redistributable_bin/osx/` |
+
+Take the file for the same architecture as the archive you unpacked. On macOS that is one universal
+`libsteam_api.dylib` for both the arm64 and the x64 archive. There is no Windows ARM64 build: Valve ships no
+Steam runtime for ARM64 Windows.
 
 The plugin folder is the one location all three dynamic loaders agree on: on Windows the plugin loads
 the runtime from there explicitly, on Linux it carries an `$ORIGIN` RPATH, and on macOS

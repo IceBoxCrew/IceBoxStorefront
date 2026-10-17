@@ -42,9 +42,13 @@ party to that agreement and sublicenses nothing under it.
 You need exactly one file out of that SDK to run the plugin:
 
 ```
-Windows   redistributable_bin/win64/steam_api64.dll
-Linux     redistributable_bin/linux64/libsteam_api.so
-macOS     redistributable_bin/osx/libsteam_api.dylib
+Windows x64    redistributable_bin/win64/steam_api64.dll
+Windows x86    redistributable_bin/steam_api.dll
+Linux x64      redistributable_bin/linux64/libsteam_api.so
+Linux x86      redistributable_bin/linux32/libsteam_api.so
+Linux arm64    redistributable_bin/linuxarm64/libsteam_api.so
+macOS arm64    redistributable_bin/osx/libsteam_api.dylib
+macOS x64      redistributable_bin/osx/libsteam_api.dylib
 ```
 
 Put it in the plugin folder, next to `IceBoxStorefront.dll` / `IceBoxStorefront.so` /
